@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSTPRESS - Элитная упаковка</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <div class="logo">
+                    <span style="background: white; color: black; padding: 8px 12px; border-radius: 8px; font-weight: 600; margin-right: 8px;">наше<br>лого</span>
+                    POSTPRESS
+                </div>
+            </div>
+            <div class="nav-center">
+                <a href="#hero" class="nav-link">Главная</a>
+                <a href="#portfolio" class="nav-link">Портфолио</a>
+                <a href="#services" class="nav-link">Услуги</a>
+                <a href="#contact" class="nav-link">КОНТАКТЫ</a>
+            </div>
+            <div class="nav-right">
+                <div class="contact-info">
+                    <span class="contact-phone">+7 (999) 123-45-67</span>
+                    <span class="contact-email">info@postpress.ru</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section id="hero" class="hero">
+        <div class="hero-overlay">
+            <div class="hero-content">
+                <div class="cta-badge">Элитная упаковка класса люкс</div>
+                <p class="hero-subtitle">СОЗДАЕМ ПРЕМИАЛЬНУЮ УПАКОВКУ ДЛЯ ВАШИХ ПРОДУКТОВ</p>
+                <h1 class="hero-title">POSTPRESS</h1>
+                <div class="hero-description">
+                    <p>Производим эксклюзивную упаковку для парфюмерии, косметики и товаров премиум-сегмента. Работаем с ведущими брендами: создаем коробки, футляры и подарочную упаковку по индивидуальным проектам.</p>
+                    <p>Специализируемся на сложных техниках: тиснение фольгой, лакирование, ламинирование и эксклюзивные материалы с любыми тиражами от единичных образцов до крупносерийного производства.</p>
+                </div>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" onclick="scrollToContact()">Заказать упаковку</button>
+                    <button class="btn btn-secondary" onclick="scrollToPortfolio()">Посмотреть портфолио</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="portfolio" class="portfolio">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-subtitle">ПОРТФОЛИО</p>
+                <h2 class="section-title">Наши работы</h2>
+                <p class="section-description">
+                    Каждая коробка — это произведение искусства. Мы создаем упаковку, которая подчеркивает статус бренда и становится неотъемлемой частью продукта. Наши дизайнеры работают с каждой деталью — от концепции до финишной отделки.
+                </p>
+            </div>
+            <div class="portfolio-grid" id="portfolioGrid">
+                <!-- Работы будут загружены динамически -->
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="services">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Услуги</h2>
+            </div>
+            <div class="services-grid">
+                <div class="service-item">
+                    <h3>Коробки для парфюмерии</h3>
+                    <p>Элитная упаковка для ароматов с применением благородных материалов, тиснения золотом и серебром. Создаем коробки, которые подчеркивают изысканность парфюма.</p>
+                </div>
+                <div class="service-item">
+                    <h3>Упаковка для косметики</h3>
+                    <p>Функциональные и красивые решения для косметических продуктов. Разрабатываем коробки с ложементами, магнитными замками и эксклюзивной отделкой.</p>
+                </div>
+                <div class="service-item">
+                    <h3>Подарочная упаковка</h3>
+                    <p>Премиальные футляры и коробки для подарков. Используем эксклюзивные материалы: велюр, бархат, дизайнерскую бумагу и авторские решения.</p>
+                </div>
+                <div class="service-item">
+                    <h3>Эксклюзивные серии</h3>
+                    <p>Лимитированные коллекции и VIP-упаковка. Разрабатываем уникальные концепции с применением редких материалов и сложных техник производства.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <div class="contact-overlay">
+            <div class="container">
+                <div class="section-header">
+                    <p class="section-subtitle">КОНТАКТЫ</p>
+                    <h2 class="section-title">Готовы создать элитную упаковку?</h2>
+                    <p class="section-description">Оставьте заявку, и мы свяжемся с вами для обсуждения проекта. Консультация и создание макета — бесплатно!</p>
+                </div>
+                
+                <form id="contactForm" class="contact-form">
+                    <div class="form-group">
+                        <input type="text" id="name" name="name" placeholder="Ваше имя" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="tel" id="phone" name="phone" placeholder="Телефон" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="email" name="email" placeholder="Email">
+                    </div>
+                    <div class="form-group">
+                        <textarea id="message" name="message" placeholder="Расскажите о проекте: тип продукта, желаемые материалы, тираж, особые требования" rows="4"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Получить коммерческое предложение</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">POSTPRESS</div>
+                <div class="footer-contact">
+                    <span>+7 (999) 123-45-67</span>
+                    <span>info@postpress.ru</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="notification" class="notification hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

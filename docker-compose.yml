@@ -1,0 +1,46 @@
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      - ./backend/uploads:/app/uploads:rw
+      - ./backend/data:/app/data:rw
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ./backend/uploads:/usr/share/nginx/html/uploads:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  backend_uploads:
+    driver: local
+  backend_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
+    name: postpress_network 

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админка - POSTPRESS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <header class="admin-header">
+        <div class="header-content">
+            <div class="admin-logo">POSTPRESS <span>ADMIN</span></div>
+            <div class="header-actions">
+                <a href="index.html" class="view-site-btn">👁️ Посмотреть сайт</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="admin-content">
+        <div class="container">
+            <h1 class="section-title">Управление портфолио</h1>
+            <p class="section-description">Добавляйте и редактируйте образцы элитной упаковки</p>
+            
+            <div class="upload-section">
+                <button class="btn btn-primary" onclick="showAddWorkModal()">+ Добавить новую упаковку</button>
+            </div>
+
+            <div class="portfolio-grid" id="worksGrid">
+                <!-- Работы будут загружены динамически -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for adding/editing work -->
+    <div id="workModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Добавить упаковку</h2>
+                <button class="modal-close" onclick="hideWorkModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="workForm" class="upload-form">
+                    <input type="hidden" id="workId" name="workId">
+                    
+                    <div class="form-group">
+                        <label for="workTitle">Название упаковки *</label>
+                        <input type="text" id="workTitle" name="title" required placeholder="Например: Коробка для парфюма с тиснением золотом">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workDescription">Описание проекта</label>
+                        <textarea id="workDescription" name="description" rows="4" placeholder="Расскажите об особенностях упаковки, использованных материалах, техниках отделки и назначении"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workArea">Характеристики</label>
+                        <input type="text" id="workArea" name="area" placeholder="150×100×50 мм или Серия люкс">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Изображения упаковки</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="imageInput" class="file-input" accept="image/*" multiple>
+                            <label for="imageInput" class="file-input-label">
+                                <span class="icon">📸</span>
+                                <span class="text">Выберите изображения</span>
+                                <span class="subtext">Можно выбрать несколько файлов</span>
+                            </label>
+                        </div>
+                        <div id="imagePreview" class="image-preview"></div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideWorkModal()">Отмена</button>
+                <button type="submit" form="workForm" class="btn btn-primary" id="saveButton">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Подтверждение удаления</h2>
+                <button class="modal-close" onclick="hideDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить эту упаковку? Действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">Отмена</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="toast"></div>
+
+    <script src="admin.js"></script>
+</body>
+</html> 
