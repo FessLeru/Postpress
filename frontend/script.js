@@ -39,6 +39,8 @@ function createPlaceholderImages() {
 
 // Portfolio Variables
 let portfolioWorks = [];
+let currentWorkIndex = 0;
+let currentImageIndex = 0;
 
 // Load portfolio works
 async function loadPortfolio() {
@@ -108,6 +110,7 @@ async function openPortfolioModal(index) {
         }
         
         currentWorkIndex = index;
+        currentImageIndex = 0;
         const work = portfolioWorks[index];
         
         const modal = document.createElement('div');
@@ -127,22 +130,23 @@ async function openPortfolioModal(index) {
                              alt="${work.title || 'Работа'}" 
                              class="modal-image"
                              onerror="this.src='/uploads/placeholder.jpg'">
+                        
+                        ${work.images && work.images.length > 1 ? `
+                            <button class="modal-image-nav prev" onclick="changeModalImage(-1)">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                            <button class="modal-image-nav next" onclick="changeModalImage(1)">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                            <div class="modal-image-counter">${currentImageIndex + 1} / ${work.images.length}</div>
+                        ` : ''}
                     </div>
                     
-                    ${portfolioWorks.length > 1 ? `
-                        <button class="modal-nav prev" onclick="changeModalWork(-1)">
-                            <svg width="24" height="24" viewBox="0 0 24 24">
-                                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </button>
-                        <button class="modal-nav next" onclick="changeModalWork(1)">
-                            <svg width="24" height="24" viewBox="0 0 24 24">
-                                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                        </button>
-                    ` : ''}
-                    
-                    <div class="modal-counter">${index + 1} / ${portfolioWorks.length}</div>
+
                 </div>
                 
                 <div class="modal-info">
@@ -155,10 +159,16 @@ async function openPortfolioModal(index) {
                     <div class="modal-thumbnails">
                         ${work.images.map((img, i) => `
                             <div class="modal-thumbnail ${i === 0 ? 'active' : ''}" 
-                                 onclick="changeModalImage(${i})">
+                                 onclick="changeModalImageByIndex(${i})">
                                 <img src="${UPLOAD_BASE}/uploads/${img}" alt="" onerror="this.src='/uploads/placeholder.jpg'">
                             </div>
                         `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${work.images && work.images.length > 1 ? `
+                    <div class="modal-help" id="modalHelp">
+                        Используйте стрелки или свайпы для переключения фото
                     </div>
                 ` : ''}
             </div>
@@ -166,6 +176,39 @@ async function openPortfolioModal(index) {
         
         document.body.appendChild(modal);
         document.body.style.overflow = 'hidden';
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', handleModalKeyboard);
+        
+        // Add touch events for mobile swipe
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        const modalContent = modal.querySelector('.modal-content');
+        modalContent.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        modalContent.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipeGesture();
+        });
+        
+        function handleSwipeGesture() {
+            const swipeThreshold = 50;
+            const swipeDistance = touchEndX - touchStartX;
+            
+            if (Math.abs(swipeDistance) > swipeThreshold) {
+                const work = portfolioWorks[currentWorkIndex];
+                if (work && work.images && work.images.length > 1) {
+                    if (swipeDistance > 0) {
+                        changeModalImage(-1); // Previous image
+                    } else {
+                        changeModalImage(1); // Next image
+                    }
+                }
+            }
+        }
         
     } catch (error) {
         console.error('Ошибка открытия модального окна:', error);
@@ -182,37 +225,95 @@ function closePortfolioModal() {
             document.body.style.overflow = '';
         }, 300);
     }
+    // Remove keyboard event listener
+    document.removeEventListener('keydown', handleModalKeyboard);
 }
 
-// Change modal work (navigate between works)
-function changeModalWork(delta) {
-    let newIndex = currentWorkIndex + delta;
+
+
+// Hide modal help
+function hideModalHelp() {
+    const help = document.getElementById('modalHelp');
+    if (help && !help.classList.contains('hide')) {
+        help.classList.add('hide');
+    }
+}
+
+// Change modal image (within same work) - by direction
+function changeModalImage(direction) {
+    const work = portfolioWorks[currentWorkIndex];
+    if (!work || !work.images || work.images.length <= 1) return;
     
+    // Calculate new index
+    let newIndex = currentImageIndex + direction;
+    
+    // Handle wrapping
     if (newIndex < 0) {
-        newIndex = portfolioWorks.length - 1;
-    } else if (newIndex >= portfolioWorks.length) {
+        newIndex = work.images.length - 1;
+    } else if (newIndex >= work.images.length) {
         newIndex = 0;
     }
     
-    closePortfolioModal();
-    setTimeout(() => openPortfolioModal(newIndex), 100);
+    changeModalImageByIndex(newIndex);
 }
 
-// Change modal image (within same work)
-function changeModalImage(imageIndex) {
+// Change modal image by specific index
+function changeModalImageByIndex(imageIndex) {
     const work = portfolioWorks[currentWorkIndex];
     if (!work || !work.images || !work.images[imageIndex]) return;
     
+    currentImageIndex = imageIndex;
+    
     const currentImg = document.querySelector('.modal-image');
     const thumbnails = document.querySelectorAll('.modal-thumbnail');
+    const imageCounter = document.querySelector('.modal-image-counter');
+    
+    // Hide help when user interacts
+    hideModalHelp();
     
     if (currentImg) {
-        currentImg.src = `${UPLOAD_BASE}/uploads/${work.images[imageIndex]}`;
+        // Add switching animation
+        currentImg.classList.add('switching');
+        
+        // Change image after a short delay
+        setTimeout(() => {
+            currentImg.src = `${UPLOAD_BASE}/uploads/${work.images[imageIndex]}`;
+            currentImg.classList.remove('switching');
+        }, 100);
     }
     
     thumbnails.forEach((thumb, index) => {
         thumb.classList.toggle('active', index === imageIndex);
     });
+    
+    if (imageCounter) {
+        imageCounter.textContent = `${imageIndex + 1} / ${work.images.length}`;
+    }
+}
+
+// Handle keyboard navigation in modal
+function handleModalKeyboard(event) {
+    if (!document.querySelector('.portfolio-modal.active')) return;
+    
+    const work = portfolioWorks[currentWorkIndex];
+    
+    switch (event.key) {
+        case 'Escape':
+            closePortfolioModal();
+            break;
+        case 'ArrowLeft':
+            event.preventDefault();
+            if (work && work.images && work.images.length > 1) {
+                changeModalImage(-1);
+            }
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            if (work && work.images && work.images.length > 1) {
+                changeModalImage(1);
+            }
+            break;
+    }
 }
 
 // Contact form handler
@@ -226,7 +327,6 @@ async function handleContactForm(event) {
     const data = {
         name: formData.get('name'),
         phone: formData.get('phone'),
-        email: formData.get('email'),
         message: formData.get('message')
     };
     

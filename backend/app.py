@@ -11,9 +11,71 @@ import uuid
 from PIL import Image
 import io
 import pathlib
+import logging
+from functools import wraps
 
 app = Flask(__name__)
 CORS(app)
+
+# Настройка логирования с безопасным обращением к файлам
+handlers = [logging.StreamHandler()]
+
+# Пытаемся добавить файловое логирование, но не падаем если не получается
+try:
+    file_handler = logging.FileHandler('app.log', encoding='utf-8')
+    handlers.append(file_handler)
+    print("Логирование в файл app.log включено")
+except (PermissionError, OSError) as e:
+    print(f"Предупреждение: Не удалось создать файл логов: {e}")
+    print("Логирование будет только в консоль")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=handlers
+)
+logger = logging.getLogger(__name__)
+
+# Middleware для логирования всех запросов
+@app.before_request
+def log_request_info():
+    logger.info(f"[REQUEST] ===== НОВЫЙ ЗАПРОС =====")
+    logger.info(f"[REQUEST] Метод: {request.method}")
+    logger.info(f"[REQUEST] URL: {request.url}")
+    logger.info(f"[REQUEST] Путь: {request.path}")
+    logger.info(f"[REQUEST] Headers: {dict(request.headers)}")
+    logger.info(f"[REQUEST] Remote IP: {request.remote_addr}")
+    logger.info(f"[REQUEST] User Agent: {request.user_agent}")
+    if request.is_json:
+        logger.info(f"[REQUEST] JSON данные: {request.get_json()}")
+    elif request.form:
+        logger.info(f"[REQUEST] Form данные: {dict(request.form)}")
+    logger.info(f"[REQUEST] ========================")
+
+@app.after_request
+def log_response_info(response):
+    logger.info(f"[RESPONSE] ===== ОТВЕТ =====")
+    logger.info(f"[RESPONSE] Status Code: {response.status_code}")
+    logger.info(f"[RESPONSE] Headers: {dict(response.headers)}")
+    if response.is_json:
+        logger.info(f"[RESPONSE] JSON ответ: {response.get_json()}")
+    logger.info(f"[RESPONSE] =================")
+    return response
+
+def log_function_call(func):
+    """Декоратор для логирования вызовов функций"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        logger.info(f"[FUNC] Вызов функции: {func.__name__}")
+        logger.info(f"[FUNC] Аргументы: args={args}, kwargs={kwargs}")
+        try:
+            result = func(*args, **kwargs)
+            logger.info(f"[FUNC] Функция {func.__name__} выполнена успешно")
+            return result
+        except Exception as e:
+            logger.error(f"[FUNC] Ошибка в функции {func.__name__}: {str(e)}")
+            raise
+    return wrapper
 
 # Конфигурация
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -87,75 +149,112 @@ def process_and_convert_image(file):
     except Exception as e:
         raise ValueError(f"Ошибка обработки изображения: {str(e)}")
 
+@log_function_call
 def load_works():
     """Загружает работы из JSON файла"""
     try:
         json_path = os.path.join(DATA_FOLDER, 'works.json')
+        logger.info(f"[WORKS] Загружаем работы из {json_path}")
         with open(json_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            works = json.load(f)
+        logger.info(f"[WORKS] Загружено {len(works)} работ")
+        return works
     except FileNotFoundError:
+        logger.warning(f"[WORKS] Файл {json_path} не найден, возвращаем пустой список")
         return []
     except json.JSONDecodeError:
-        print("Ошибка чтения JSON файла, создаем новый")
+        logger.error(f"[WORKS] Ошибка чтения JSON файла {json_path}, создаем новый")
         return []
 
+@log_function_call
 def save_works(works):
     """Сохраняет работы в JSON файл"""
     try:
         json_path = os.path.join(DATA_FOLDER, 'works.json')
+        logger.info(f"[SAVE] Сохраняем {len(works)} работ в {json_path}")
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(works, f, ensure_ascii=False, indent=2)
+        logger.info(f"[SAVE] Работы успешно сохранены")
     except Exception as e:
-        print(f"Ошибка сохранения works.json: {e}")
+        logger.error(f"[SAVE] Ошибка сохранения works.json: {e}")
         raise
 
+@log_function_call
 def send_email(name, phone, email, message=""):
+    """
+    Отправляет email заявку. Не критично если не работает.
+    """
+    logger.info(f"[EMAIL] Начинаем отправку email для {name}, {phone}")
     try:
+        # Получаем настройки email
         smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
         smtp_port = int(os.getenv('SMTP_PORT', '587'))
         sender_email = os.getenv('SENDER_EMAIL')
         sender_password = os.getenv('SENDER_PASSWORD')
         recipient_email = os.getenv('RECIPIENT_EMAIL')
         
+        logger.info(f"[EMAIL] SMTP настройки - Server: {smtp_server}, Port: {smtp_port}")
+        logger.info(f"[EMAIL] Sender: {sender_email}, Recipient: {recipient_email}")
+        logger.info(f"[EMAIL] Password set: {bool(sender_password)}")
+        
+        # Если настройки не заданы, просто логируем заявку
         if not all([sender_email, sender_password, recipient_email]):
+            logger.warning(f"[EMAIL] ПРЕДУПРЕЖДЕНИЕ: Email настройки не полные.")
+            logger.warning(f"[EMAIL] Sender: {bool(sender_email)}, Password: {bool(sender_password)}, Recipient: {bool(recipient_email)}")
+            logger.info(f"[EMAIL] Заявка логируется локально: {name}, {phone}, {message}")
             return False
             
+        logger.info(f"[EMAIL] Настройки полные, создаем сообщение...")
+        
+        # Создаем и отправляем email
         msg = MIMEMultipart()
         msg['From'] = sender_email
         msg['To'] = recipient_email
         msg['Subject'] = 'Новая заявка с сайта POSTPRESS'
         
         body = f"""
-        Новая заявка с сайта:
-        
-        Имя: {name}
-        Телефон: {phone}
-        Email: {email}
-        Сообщение: {message}
-        
-        Дата: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+Новая заявка с сайта POSTPRESS:
+
+Имя: {name}
+Телефон: {phone}
+Сообщение: {message}
+
+Дата: {datetime.now().strftime('%d.%m.%Y %H:%M')}
         """
         
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        logger.info(f"[EMAIL] Сообщение создано, подключаемся к SMTP...")
         
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            logger.info(f"[EMAIL] Подключились к {smtp_server}:{smtp_port}")
+            server.starttls()
+            logger.info(f"[EMAIL] STARTTLS выполнен")
+            server.login(sender_email, sender_password)
+            logger.info(f"[EMAIL] Авторизация успешна")
+            server.send_message(msg)
+            logger.info(f"[EMAIL] Сообщение отправлено")
         
+        logger.info(f"[EMAIL] SUCCESS: Email отправлен успешно для {name}, {phone}")
         return True
+        
     except Exception as e:
-        print(f"Ошибка отправки email: {e}")
+        logger.error(f"[EMAIL] ERROR: Ошибка отправки email: {e}")
+        import traceback
+        logger.error(f"[EMAIL] ERROR TRACEBACK: {traceback.format_exc()}")
+        logger.info(f"[EMAIL] Заявка сохранена локально: {name}, {phone}, {message}")
         return False
 
 # API routes
 @app.route('/api/works', methods=['GET'])
+@log_function_call
 def get_works():
+    logger.info("[API] Получение списка работ")
     works = load_works()
+    logger.info(f"[API] Возвращаем {len(works)} работ")
     return jsonify(works)
 
 @app.route('/api/works', methods=['POST'])
+@log_function_call
 def add_work():
     """Создает новую работу"""
     try:
@@ -192,6 +291,7 @@ def add_work():
         return jsonify({'error': f'Ошибка создания работы: {str(e)}'}), 500
 
 @app.route('/api/works/<work_id>', methods=['PUT'])
+@log_function_call
 def update_work(work_id):
     """Обновляет существующую работу"""
     try:
@@ -227,6 +327,7 @@ def update_work(work_id):
         return jsonify({'error': f'Ошибка обновления работы: {str(e)}'}), 500
 
 @app.route('/api/works/<work_id>', methods=['DELETE'])
+@log_function_call
 def delete_work(work_id):
     try:
         works = load_works()
@@ -249,6 +350,7 @@ def delete_work(work_id):
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/works/<work_id>/images', methods=['POST'])
+@log_function_call
 def upload_image(work_id):
     """Загружает и обрабатывает изображение для работы"""
     try:
@@ -314,6 +416,7 @@ def upload_image(work_id):
         return jsonify({'error': f'Внутренняя ошибка сервера: {str(e)}'}), 500
 
 @app.route('/api/works/<work_id>/images/<filename>', methods=['DELETE'])
+@log_function_call
 def delete_image(work_id, filename):
     try:
         works = load_works()
@@ -337,43 +440,151 @@ def delete_image(work_id, filename):
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/contact', methods=['POST'])
+@log_function_call
 def send_contact():
+    """Обработка контактной формы с полным логированием"""
+    logger.info("[CONTACT] =================== CONTACT API ВЫЗВАН ===================")
+    
     try:
+        logger.info("[CONTACT] Шаг 1: Начинаем обработку контактной формы")
+        
+        # Получаем данные из запроса
+        logger.info("[CONTACT] Шаг 2: Получаем JSON данные из запроса")
         data = request.get_json()
+        logger.info(f"[CONTACT] Шаг 3: Получены данные: {data}")
+        logger.info(f"[CONTACT] Шаг 4: Тип данных: {type(data)}")
+        
+        if not data:
+            logger.warning("[CONTACT] Шаг 5: Данные пустые - возвращаем ошибку 400")
+            return jsonify({'error': 'Нет данных в запросе'}), 400
+        
+        # Извлекаем поля
+        logger.info("[CONTACT] Шаг 6: Извлекаем поля из данных")
         name = data.get('name', '')
         phone = data.get('phone', '')
-        email = data.get('email', '')
         message = data.get('message', '')
         
-        if not phone and not email:
-            return jsonify({'error': 'Укажите телефон или email'}), 400
-            
-        success = send_email(name, phone, email, message)
+        logger.info(f"[CONTACT] Шаг 7: Извлеченные поля:")
+        logger.info(f"[CONTACT]   - Имя: '{name}' (тип: {type(name)}, длина: {len(name)})")
+        logger.info(f"[CONTACT]   - Телефон: '{phone}' (тип: {type(phone)}, длина: {len(phone)})")
+        logger.info(f"[CONTACT]   - Сообщение: '{message[:100]}...' (тип: {type(message)}, длина: {len(message)})")
         
-        if success:
-            return jsonify({'message': 'Заявка отправлена'})
-        else:
-            return jsonify({'error': 'Ошибка отправки заявки'}), 500
+        # Валидация
+        logger.info("[CONTACT] Шаг 8: Проводим валидацию")
+        if not name or not name.strip():
+            logger.warning("[CONTACT] Шаг 9: Имя пустое - возвращаем ошибку")
+            return jsonify({'error': 'Укажите ваше имя'}), 400
+        
+        if not phone or not phone.strip():
+            logger.warning("[CONTACT] Шаг 10: Телефон пустой - возвращаем ошибку")
+            return jsonify({'error': 'Укажите номер телефона'}), 400
+        
+        logger.info("[CONTACT] Шаг 11: Валидация прошла успешно!")
+        
+        # Сохраняем заявку в файл для истории
+        logger.info("[CONTACT] Шаг 12: Сохраняем заявку в файл")
+        try:
+            contact_data = {
+                'name': name.strip(),
+                'phone': phone.strip(),
+                'message': message.strip(),
+                'timestamp': datetime.now().isoformat(),
+                'ip_address': request.remote_addr,
+                'user_agent': str(request.user_agent)
+            }
+            
+            contacts_file = os.path.join(DATA_FOLDER, 'contacts.json')
+            logger.info(f"[CONTACT] Шаг 13: Файл для сохранения: {contacts_file}")
+            
+            # Загружаем существующие контакты
+            if os.path.exists(contacts_file):
+                with open(contacts_file, 'r', encoding='utf-8') as f:
+                    contacts = json.load(f)
+                logger.info(f"[CONTACT] Шаг 14: Загружено {len(contacts)} существующих контактов")
+            else:
+                contacts = []
+                logger.info("[CONTACT] Шаг 14: Создаем новый файл контактов")
+            
+            contacts.append(contact_data)
+            
+            # Сохраняем обновленный список
+            with open(contacts_file, 'w', encoding='utf-8') as f:
+                json.dump(contacts, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"[CONTACT] Шаг 15: Заявка сохранена успешно. Всего контактов: {len(contacts)}")
+            
+        except Exception as save_error:
+            logger.error(f"[CONTACT] Шаг 15: Ошибка сохранения в файл: {save_error}")
+            # Продолжаем, даже если сохранение не удалось
+        
+        # Попытка отправки email (не критично)
+        logger.info("[CONTACT] Шаг 16: Попытка отправки email")
+        try:
+            send_email(name.strip(), phone.strip(), "", message.strip())
+            logger.info("[CONTACT] Шаг 17: Email отправлен успешно")
+        except Exception as email_error:
+            logger.warning(f"[CONTACT] Шаг 17: Ошибка отправки email (не критично): {email_error}")
+        
+        logger.info("[CONTACT] Шаг 18: Возвращаем успешный ответ")
+        response_data = {'message': 'Заявка принята! Спасибо за обращение, мы свяжемся с вами в ближайшее время.'}
+        logger.info(f"[CONTACT] Шаг 19: Ответ клиенту: {response_data}")
+        
+        return jsonify(response_data)
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"[CONTACT] ERROR: КРИТИЧЕСКАЯ ОШИБКА: {str(e)}")
+        logger.error(f"[CONTACT] ERROR: ТИП ОШИБКИ: {type(e).__name__}")
+        
+        # Подробная информация об ошибке
+        import traceback
+        logger.error(f"[CONTACT] ERROR: ПОЛНЫЙ ТРЕЙСБЭК:\n{traceback.format_exc()}")
+        
+        error_response = {'error': f'Внутренняя ошибка сервера: {str(e)}'}
+        logger.error(f"[CONTACT] ERROR: Возвращаем ошибку клиенту: {error_response}")
+        
+        return jsonify(error_response), 500
 
 @app.route('/uploads/<filename>')
+@log_function_call
 def uploaded_file(filename):
     """Отдает загруженные изображения"""
+    logger.info(f"[FILES] Запрос файла: {filename}")
     try:
         # Проверяем, что файл существует
         file_path = os.path.join(UPLOAD_FOLDER, filename)
+        logger.info(f"[FILES] Проверяем путь: {file_path}")
         if not os.path.exists(file_path):
+            logger.warning(f"[FILES] Файл не найден: {file_path}")
             return jsonify({'error': 'Файл не найден'}), 404
             
         # Безопасно отдаем файл
+        logger.info(f"[FILES] Отдаем файл: {filename}")
         return send_from_directory(UPLOAD_FOLDER, filename)
     except Exception as e:
+        logger.error(f"[FILES] Ошибка при отдаче файла {filename}: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/health')
+@log_function_call
 def health():
-    return jsonify({'status': 'ok'})
+    logger.info("[HEALTH] Health check запрос")
+    return jsonify({'status': 'ok', 'version': 'LOGGED_VERSION_2025', 'message': 'All systems operational!'})
+
+@app.route('/api/test')
+@log_function_call
+def test():
+    logger.info("[TEST] TEST ENDPOINT ВЫЗВАН!")
+    return jsonify({'message': 'Тестовый endpoint работает!', 'version': 'LOGGED_VERSION_2025'})
 
 if __name__ == '__main__':
+    logger.info("[STARTUP] ==========================================")
+    logger.info("[STARTUP] ЗАПУСК POSTPRESS FLASK API")
+    logger.info("[STARTUP] ==========================================")
+    logger.info("[STARTUP] Версия: LOGGED_VERSION_2025")
+    logger.info("[STARTUP] Порт: 5000")
+    logger.info("[STARTUP] Логирование: ВКЛЮЧЕНО")
+    logger.info("[STARTUP] Файл логов: app.log")
+    logger.info("[STARTUP] Папка uploads: " + UPLOAD_FOLDER)
+    logger.info("[STARTUP] Папка data: " + DATA_FOLDER)
+    logger.info("[STARTUP] ==========================================")
     app.run(host='0.0.0.0', port=5000, debug=True) 
