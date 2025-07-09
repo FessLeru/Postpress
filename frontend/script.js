@@ -479,6 +479,117 @@ function createParticles() {
 
 // Touch events removed - using grid layout now
 
+// ========================================
+// MOBILE MENU FUNCTIONALITY
+// ========================================
+
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    
+    const isActive = mobileMenu.classList.contains('active');
+    
+    if (isActive) {
+        closeMobileMenu();
+    } else {
+        openMobileMenu();
+    }
+}
+
+function openMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    
+    mobileMenu.classList.add('active');
+    mobileMenuOverlay.classList.add('active');
+    mobileMenuToggle.classList.add('active');
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Add escape key listener
+    document.addEventListener('keydown', handleMobileMenuKeydown);
+}
+
+function closeMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    
+    mobileMenu.classList.remove('active');
+    mobileMenuOverlay.classList.remove('active');
+    mobileMenuToggle.classList.remove('active');
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    
+    // Remove escape key listener
+    document.removeEventListener('keydown', handleMobileMenuKeydown);
+}
+
+function handleMobileMenuKeydown(event) {
+    if (event.key === 'Escape') {
+        closeMobileMenu();
+    }
+}
+
+// Close mobile menu when clicking on nav links
+document.addEventListener('DOMContentLoaded', () => {
+    const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+    mobileNavLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            setTimeout(() => {
+                closeMobileMenu();
+            }, 300); // Small delay for smooth scrolling
+        });
+    });
+});
+
+// ========================================
+// ENHANCED NAVIGATION WITH MOBILE SUPPORT
+// ========================================
+
+// Update existing smooth scroll to work with mobile menu
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        // Close mobile menu if open
+        if (document.getElementById('mobileMenu').classList.contains('active')) {
+            closeMobileMenu();
+            // Delay scroll to allow menu to close
+            setTimeout(() => {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        } else {
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
+// ========================================
+// INITIALIZE MOBILE MENU ON PAGE LOAD
+// ========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Ensure mobile menu is closed on page load
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    
+    if (mobileMenu) mobileMenu.classList.remove('active');
+    if (mobileMenuOverlay) mobileMenuOverlay.classList.remove('active');
+    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 1024) {
+            closeMobileMenu();
+        }
+    });
+});
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 Инициализация POSTPRESS...');

@@ -22,5 +22,21 @@
     "timestamp": "2025-07-06T12:35:38.251138",
     "ip_address": "172.30.0.3",
     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+  },
+  {
+    "name": "Alex",
+    "phone": "+7 (375) 295-47-01",
+    "message": "qwq",
+    "timestamp": "2025-07-06T21:40:31.865620",
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+  },
+  {
+    "name": "Андрей",
+    "phone": "+7 (921) 953-78-77",
+    "message": "жду тз по ботяре))",
+    "timestamp": "2025-07-09T13:09:43.578448",
+    "ip_address": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
   }
 ]

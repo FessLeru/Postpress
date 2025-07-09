@@ -13,35 +13,71 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-left">
-                <div class="logo">
-                    <span style="background: white; color: black; padding: 8px 12px; border-radius: 8px; font-weight: 600; margin-right: 8px;">наше<br>лого</span>
-                    POSTPRESS
+                <div class="logo" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <img src="/uploads/logo.png" alt="Логотип Постпресс" style="height: 170px; padding: 8px 12px; border-radius: 8px; position: absolute;">
                 </div>
             </div>
             <div class="nav-center">
                 <a href="#hero" class="nav-link">Главная</a>
                 <a href="#portfolio" class="nav-link">Портфолио</a>
-                <a href="#services" class="nav-link">Услуги</a>
-                <a href="#contact" class="nav-link">КОНТАКТЫ</a>
+                <a href="#services" class="nav-link">Наши преимущества</a>
+                <a href="#contact" class="nav-link">Контакты</a>
             </div>
             <div class="nav-right">
                 <div class="contact-info">
-                    <span class="contact-phone">+7 (999) 123-45-67</span>
-                    <span class="contact-email">info@postpress.ru</span>
+                    <a class="contact-phone" href="tel:+375296517187">+375 (29) 651-71-87</a>
+                    <a class="contact-email" href="mailto:univit@yandex.by">univit@yandex.by</a>
                 </div>
+                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
             </div>
         </div>
     </nav>
 
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <div class="mobile-logo">POSTPRESS</div>
+            <button class="mobile-menu-close" onclick="closeMobileMenu()">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </button>
+        </div>
+        <div class="mobile-menu-content">
+            <div class="mobile-nav-links">
+                <a href="#hero" class="mobile-nav-link" onclick="closeMobileMenu()">Главная</a>
+                <a href="#portfolio" class="mobile-nav-link" onclick="closeMobileMenu()">Портфолио</a>
+                <a href="#services" class="mobile-nav-link" onclick="closeMobileMenu()">Наши преимущества</a>
+                <a href="#contact" class="mobile-nav-link" onclick="closeMobileMenu()">Контакты</a>
+            </div>
+            <div class="mobile-contact-info">
+                <a class="mobile-contact-phone" href="tel:+375296517187">+375 (29) 651-71-87</a>
+                <a class="mobile-contact-email" href="mailto:univit@yandex.by">univit@yandex.by</a>
+            </div>
+        </div>
+    </div>
+
     <section id="hero" class="hero">
         <div class="hero-overlay">
             <div class="hero-content">
-                <div class="cta-badge">Элитная упаковка класса люкс</div>
-                <p class="hero-subtitle">СОЗДАЕМ ПРЕМИАЛЬНУЮ УПАКОВКУ ДЛЯ ВАШИХ ПРОДУКТОВ</p>
+                <p class="hero-subtitle">Создаем упаковку, которая работает на ваш бренд</p>
                 <h1 class="hero-title">POSTPRESS</h1>
                 <div class="hero-description">
-                    <p>Производим эксклюзивную упаковку для парфюмерии, косметики и товаров премиум-сегмента. Работаем с ведущими брендами: создаем коробки, футляры и подарочную упаковку по индивидуальным проектам.</p>
-                    <p>Специализируемся на сложных техниках: тиснение фольгой, лакирование, ламинирование и эксклюзивные материалы с любыми тиражами от единичных образцов до крупносерийного производства.</p>
+                    <p>ООО «Постпресс» — производитель специализированной упаковки премиум-качества для корпоративных заказчиков. Мы предлагаем комплексные решения в области разработки и производства:
+
+                        кашированных коробок любой сложности, включая конструкции с демонстрационными окнами;
+                        
+                        рекламных упаковок под индивидуальные маркетинговые задачи;
+                        
+                        брендированных папок с кольцевым механизмом и промопортфелей.</p>
+                    <p>Специализируемся на сложных техниках: тиснение фольгой, лакирование, ламинирование и эксклюзивные материалы с тиражами от 100 штук.</p>
                 </div>
                 <div class="hero-buttons">
                     <button class="btn btn-primary" onclick="scrollToContact()">Заказать упаковку</button>
@@ -57,7 +93,9 @@
                 <p class="section-subtitle">ПОРТФОЛИО</p>
                 <h2 class="section-title">Наши работы</h2>
                 <p class="section-description">
-                    Каждая коробка — это произведение искусства. Мы создаем упаковку, которая подчеркивает статус бренда и становится неотъемлемой частью продукта. Наши дизайнеры работают с каждой деталью — от концепции до финишной отделки.
+                    Каждый проект — это результат точного расчета, инженерного подхода и визуального вкуса. Мы разрабатываем упаковку, которая усиливает восприятие бренда, повышает ценность продукта на полке и полностью соответствует задачам клиента.
+                    <br><br>
+                    Наши специалисты контролируют все этапы — от разработки конструктивного макета до финишной отделки: тиснение, ламинация, выбор материалов и формы — всё под ваш бренд и задачу.
                 </p>
             </div>
             <div class="portfolio-grid" id="portfolioGrid">
@@ -69,24 +107,22 @@
     <section id="services" class="services">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Услуги</h2>
+                <h2 class="section-title">Наши преимущества</h2>
             </div>
             <div class="services-grid">
                 <div class="service-item">
-                    <h3>Коробки для парфюмерии</h3>
-                    <p>Элитная упаковка для ароматов с применением благородных материалов, тиснения золотом и серебром. Создаем коробки, которые подчеркивают изысканность парфюма.</p>
+                    <h3>Гибкий подход к производству:</h3>
+                    <p>Мы подстраиваемся под ваши задачи: от небольших пилотных серий до массовых тиражей. Конструкции, форматы, сроки — всё адаптируется под особенности вашего продукта и логистики.
+                        Вы получаете упаковку, которая работает под ваш бизнес, а не наоборот.</p>
                 </div>
                 <div class="service-item">
-                    <h3>Упаковка для косметики</h3>
-                    <p>Функциональные и красивые решения для косметических продуктов. Разрабатываем коробки с ложементами, магнитными замками и эксклюзивной отделкой.</p>
+                    <h3>Сертифицированное качество:</h3>
+                    <p>Наша продукция соответствует требованиям ТР/ТС 005/2011 — для пищевых и непищевых товаров. Мы строго контролируем качество на всех этапах — от сырья до упаковки, чтобы вы могли быть уверены в безопасности и надёжности.
+                        </p>
                 </div>
                 <div class="service-item">
-                    <h3>Подарочная упаковка</h3>
-                    <p>Премиальные футляры и коробки для подарков. Используем эксклюзивные материалы: велюр, бархат, дизайнерскую бумагу и авторские решения.</p>
-                </div>
-                <div class="service-item">
-                    <h3>Эксклюзивные серии</h3>
-                    <p>Лимитированные коллекции и VIP-упаковка. Разрабатываем уникальные концепции с применением редких материалов и сложных техник производства.</p>
+                    <h3>Индивидуальные решения:</h3>
+                    <p>Мы предлагаем широкий выбор материалов для изготовления упаковок, включая переплетный картон толщиной от 0,9 мм до 2,5 мм, микрогофракартон, картон полиграфический и метализированный. Это позволяет создавать упаковку, которая подчёркивает фирменный стиль, выделяет ваш продукт и запоминается клиентам.</p>
                 </div>
             </div>
         </div>
@@ -97,8 +133,8 @@
             <div class="container">
                 <div class="section-header">
                     <p class="section-subtitle">КОНТАКТЫ</p>
-                    <h2 class="section-title">Готовы создать элитную упаковку?</h2>
-                    <p class="section-description">Оставьте заявку, и мы свяжемся с вами для обсуждения проекта. Консультация и создание макета — бесплатно!</p>
+                    <h2 class="section-title">Готовы обсудить упаковочное решение для вашего продукта?</h2>
+                    <p class="section-description">Оставьте заявку и мы свяжется с вами для уточнения задач и подготовки индивидуального предложения.</p>
                 </div>
                 
                 <form id="contactForm" class="contact-form">
@@ -120,10 +156,52 @@
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-logo">POSTPRESS</div>
-                <div class="footer-contact">
-                    <span>+7 (999) 123-45-67</span>
-                    <span>info@postpress.ru</span>
+                <div class="footer-main">
+                    <div class="footer-logo-section">
+                        <div class="footer-logo">POSTPRESS</div>
+                        <p class="footer-tagline">Элитная упаковка премиум-качества</p>
+                    </div>
+                    <div class="footer-contact-section">
+                        <div class="footer-contact">
+                            <h4>Контакты</h4>
+                            <a href="tel:+375296517187">+375 (29) 651-71-87</a>
+                            <a href="mailto:univit@yandex.by">univit@yandex.by</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-divider"></div>
+                
+                <div class="footer-requisites">
+                    <div class="requisites-section">
+                        <h4>Реквизиты организации</h4>
+                        <div class="requisites-content">
+                            <div class="requisites-item">
+                                <span class="requisites-label">Полное наименование:</span>
+                                <span class="requisites-value">Общество с ограниченной ответственностью «Постпресс»</span>
+                            </div>
+                            <div class="requisites-item">
+                                <span class="requisites-label">Сокращенное наименование:</span>
+                                <span class="requisites-value">ООО «Постпресс»</span>
+                            </div>
+                            <div class="requisites-item">
+                                <span class="requisites-label">УНП:</span>
+                                <span class="requisites-value">123456789</span>
+                            </div>
+                            <div class="requisites-item">
+                                <span class="requisites-label">Юридический адрес:</span>
+                                <span class="requisites-value">Республика Беларусь, г. Минск</span>
+                            </div>
+                            <div class="requisites-item">
+                                <span class="requisites-label">Банковские реквизиты:</span>
+                                <span class="requisites-value">р/с: BY00 UNBS 0000 0000 0000 0000 0000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-bottom">
+                    <p>&copy; 2024 POSTPRESS. Все права защищены.</p>
                 </div>
             </div>
         </div>
