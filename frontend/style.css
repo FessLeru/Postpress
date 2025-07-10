@@ -1164,61 +1164,122 @@ section {
 .footer {
     background: rgba(9, 9, 11, 0.95);
     color: var(--white);
-    padding: var(--space-xl) 0;
+    padding: 32px 0 24px 0; /* Фиксированные значения для консистентности */
     border-top: 1px solid rgba(220, 38, 38, 0.3);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); /* Safari */
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    /* Принудительные стили для консистентности */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .footer-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px; /* Фиксированные отступы */
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
 }
 
 .footer-main {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: var(--space-xl);
-    align-items: start;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    align-items: flex-start;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .footer-logo-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-contact-section {
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    min-width: 180px;
+    max-width: 220px;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-requisites-section {
+    -webkit-box-flex: 2;
+    -ms-flex: 2;
+    flex: 2;
+    min-width: 280px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
 }
 
 .footer-logo {
     font-family: var(--font-serif);
-    font-size: 1.4rem;
+    font-size: 22px; /* Фиксированный размер */
     font-weight: 700;
     color: var(--primary);
+    line-height: 1.2;
+    margin-bottom: 6px;
 }
 
 .footer-tagline {
     color: var(--gray-300);
-    font-size: 0.85rem;
+    font-size: 13px; /* Фиксированный размер */
     opacity: 0.8;
+    line-height: 1.3;
 }
 
 .footer-contact-section h4,
 .footer-requisites-section h4 {
     color: var(--primary);
-    font-size: 0.95rem;
+    font-size: 15px; /* Фиксированный размер */
     font-weight: 600;
-    margin-bottom: var(--space-sm);
+    margin-bottom: 12px;
+    margin-top: 0;
 }
 
 .footer-contact {
+    display: -webkit-box;
+    display: -ms-flexbox;
     display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: 8px;
+    box-sizing: border-box;
 }
 
 .footer-contact a {
     color: var(--gray-300);
-    font-size: 0.85rem;
+    font-size: 13px; /* Фиксированный размер */
     transition: color var(--transition-base);
+    line-height: 1.3;
 }
 
 .footer-contact a:hover {
@@ -1226,42 +1287,75 @@ section {
 }
 
 .requisites-compact {
+    display: -webkit-box;
+    display: -ms-flexbox;
     display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: 6px;
+    box-sizing: border-box;
 }
 
 .requisites-item {
+    display: -webkit-box;
+    display: -ms-flexbox;
     display: flex;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding: var(--space-xs) 0;
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 0;
+    min-height: 20px;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .requisites-label {
     color: var(--primary);
-    font-size: 0.8rem;
+    font-size: 12px; /* Фиксированный размер */
     font-weight: 500;
-    min-width: 45px;
+    min-width: 80px;
+    max-width: 80px;
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+    line-height: 1.4;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: inherit;
 }
 
 .requisites-value {
     color: var(--gray-200);
-    font-size: 0.8rem;
-    text-align: right;
+    font-size: 12px; /* Фиксированный размер */
+    line-height: 1.4;
     word-break: break-word;
-    line-height: 1.3;
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+    hyphens: auto;
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: inherit;
+    overflow-wrap: break-word;
 }
 
 .footer-bottom {
     text-align: center;
-    padding-top: var(--space-md);
+    padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .footer-bottom p {
     color: var(--gray-400);
-    font-size: 0.8rem;
+    font-size: 12px; /* Фиксированный размер */
+    margin: 0;
+    line-height: 1.3;
 }
 
 /* ========================================
@@ -1693,6 +1787,41 @@ section {
    GENERAL RESPONSIVE DESIGN
    ======================================== */
 
+/* Точные breakpoints для консистентного отображения */
+@media screen and (max-width: 1200px) {
+    .footer-main {
+        gap: 20px;
+    }
+    
+    .footer-requisites-section {
+        min-width: 240px;
+    }
+}
+
+@media screen and (max-width: 1024px) and (min-width: 769px) {
+    .footer-main {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 24px;
+    }
+    
+    .footer-logo-section {
+        min-width: 180px;
+        max-width: 240px;
+    }
+    
+    .footer-contact-section {
+        min-width: 160px;
+        max-width: 200px;
+    }
+    
+    .footer-requisites-section {
+        min-width: 100%;
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}
+
 @media (max-width: 1024px) {
     .nav-center {
         display: none;
@@ -1738,9 +1867,18 @@ section {
     }
     
     .footer-main {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: center;
         text-align: center;
-        gap: var(--space-lg);
+        gap: 32px;
+    }
+    
+    .footer-logo-section,
+    .footer-contact-section,
+    .footer-requisites-section {
+        max-width: 100%;
+        min-width: auto;
+        width: 100%;
     }
     
     .footer-contact {
@@ -1748,15 +1886,20 @@ section {
     }
     
     .requisites-item {
-        justify-content: center;
         flex-direction: column;
-        gap: var(--space-xs);
+        gap: 4px;
+        text-align: center;
+        align-items: center;
+    }
+    
+    .requisites-label {
+        min-width: auto;
+        max-width: none;
         text-align: center;
     }
     
     .requisites-value {
         text-align: center;
-        word-break: break-word;
     }
     
     section {
@@ -1826,5 +1969,66 @@ section {
     .modal-thumbnail {
         width: 50px;
         height: 50px;
+    }
+    
+    /* Футер на очень маленьких экранах */
+    .footer {
+        padding: 24px 0 16px 0;
+    }
+    
+    .footer-content {
+        padding: 0 16px;
+    }
+    
+    .footer-main {
+        gap: 24px;
+    }
+    
+    .footer-logo {
+        font-size: 20px;
+    }
+    
+    .footer-tagline {
+        font-size: 12px;
+    }
+    
+    .footer-contact-section h4,
+    .footer-requisites-section h4 {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .footer-contact a {
+        font-size: 12px;
+    }
+    
+    .requisites-label,
+    .requisites-value {
+        font-size: 11px;
+    }
+    
+    .footer-bottom {
+        padding-top: 12px;
+    }
+    
+    .footer-bottom p {
+        font-size: 11px;
+    }
+}
+
+/* Дополнительный медиа-запрос для очень широких экранов */
+@media screen and (min-width: 1400px) {
+    .footer-main {
+        max-width: 1200px;
+        margin: 0 auto;
+        gap: 48px;
+    }
+    
+    .footer-logo-section {
+        max-width: 350px;
+    }
+    
+    .footer-contact-section {
+        max-width: 250px;
     }
 } 
