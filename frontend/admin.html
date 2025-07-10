@@ -10,29 +10,65 @@
     <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-    <header class="admin-header">
-        <div class="header-content">
-            <div class="admin-logo">POSTPRESS <span>ADMIN</span></div>
-            <div class="header-actions">
-                <a href="index.html" class="view-site-btn">👁️ Посмотреть сайт</a>
+    <!-- Login Section -->
+    <div id="loginSection" class="login-section" style="display: none;">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <h1 class="login-title">POSTPRESS</h1>
+                    <p class="login-subtitle">Админ-панель</p>
+                </div>
+                
+                <form id="loginForm" class="login-form">
+                    <div class="form-group">
+                        <label for="username">Логин</label>
+                        <input type="text" id="username" name="username" required autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Пароль</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary login-btn" id="loginButton">
+                        <span class="login-text">Войти</span>
+                        <span class="login-loading" style="display: none;">Проверка...</span>
+                    </button>
+                </form>
+                
+                <div id="loginError" class="login-error" style="display: none;"></div>
             </div>
         </div>
-    </header>
+    </div>
 
-    <main class="admin-content">
-        <div class="container">
-            <h1 class="section-title">Управление портфолио</h1>
-            <p class="section-description">Добавляйте и редактируйте образцы элитной упаковки</p>
-            
-            <div class="upload-section">
-                <button class="btn btn-primary" onclick="showAddWorkModal()">+ Добавить новую упаковку</button>
+    <!-- Admin Section -->
+    <div id="adminSection" class="admin-section" style="display: none;">
+        <header class="admin-header">
+            <div class="header-content">
+                <div class="admin-logo">POSTPRESS <span>ADMIN</span></div>
+                <div class="header-actions">
+                    <span class="user-info" id="userInfo"></span>
+                    <a href="index.html" class="view-site-btn">👁️ Посмотреть сайт</a>
+                    <button class="logout-btn" onclick="logout()">Выйти</button>
+                </div>
             </div>
+        </header>
 
-            <div class="portfolio-grid" id="worksGrid">
-                <!-- Работы будут загружены динамически -->
+        <main class="admin-content">
+            <div class="container">
+                <h1 class="section-title">Управление портфолио</h1>
+                <p class="section-description">Добавляйте и редактируйте образцы элитной упаковки</p>
+                
+                <div class="upload-section">
+                    <button class="btn btn-primary" onclick="showAddWorkModal()">+ Добавить новую упаковку</button>
+                </div>
+
+                <div class="portfolio-grid" id="worksGrid">
+                    <!-- Работы будут загружены динамически -->
+                </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Modal for adding/editing work -->
     <div id="workModal" class="modal">

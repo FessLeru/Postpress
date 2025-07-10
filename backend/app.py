@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session
 from flask_cors import CORS
 import os
 import json
@@ -13,9 +13,11 @@ import io
 import pathlib
 import logging
 from functools import wraps
+import hashlib
 
 app = Flask(__name__)
-CORS(app)
+app.secret_key = os.getenv('SECRET_KEY', 'postpress-secret-key-2025')
+CORS(app, supports_credentials=True)
 
 # Настройка логирования с безопасным обращением к файлам
 handlers = [logging.StreamHandler()]
@@ -179,6 +181,87 @@ def save_works(works):
         logger.error(f"[SAVE] Ошибка сохранения works.json: {e}")
         raise
 
+def hash_password(password):
+    """Хеширует пароль с солью"""
+    salt = "postpress-salt-2025"
+    return hashlib.sha256((password + salt).encode()).hexdigest()
+
+def check_auth():
+    """Проверяет авторизацию пользователя"""
+    return session.get('authenticated', False)
+
+def require_auth(f):
+    """Декоратор для проверки авторизации"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not check_auth():
+            return jsonify({'error': 'Требуется авторизация'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/api/login', methods=['POST'])
+@log_function_call
+def login():
+    """Авторизация в админ-панели"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        logger.info(f"[AUTH] Попытка входа для пользователя: {username}")
+        
+        # Получаем учетные данные из .env
+        admin_login = os.getenv('LOGIN', 'admin')
+        admin_password = os.getenv('PASSWORD', 'admin123')
+        
+        # Хешируем введенный пароль
+        hashed_input_password = hash_password(password)
+        hashed_admin_password = hash_password(admin_password)
+        
+        logger.info(f"[AUTH] Проверка: username={username == admin_login}, password_hash_match={hashed_input_password == hashed_admin_password}")
+        
+        # Проверяем логин и хешированный пароль
+        if username == admin_login and hashed_input_password == hashed_admin_password:
+            session['authenticated'] = True
+            session['username'] = username
+            logger.info(f"[AUTH] Успешная авторизация для {username}")
+            return jsonify({
+                'success': True,
+                'message': 'Авторизация успешна',
+                'user': username
+            })
+        else:
+            logger.warning(f"[AUTH] Неудачная попытка входа для {username}")
+            return jsonify({
+                'success': False,
+                'message': 'Неверный логин или пароль'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"[AUTH] Ошибка авторизации: {e}")
+        return jsonify({'error': 'Ошибка сервера'}), 500
+
+@app.route('/api/logout', methods=['POST'])
+@log_function_call
+def logout():
+    """Выход из админ-панели"""
+    username = session.get('username', 'unknown')
+    session.clear()
+    logger.info(f"[AUTH] Пользователь {username} вышел из системы")
+    return jsonify({'success': True, 'message': 'Выход выполнен'})
+
+@app.route('/api/auth/status', methods=['GET'])
+@log_function_call
+def auth_status():
+    """Проверка статуса авторизации"""
+    if check_auth():
+        return jsonify({
+            'authenticated': True,
+            'user': session.get('username')
+        })
+    else:
+        return jsonify({'authenticated': False})
+
 @log_function_call
 def send_email(name, phone, email, message=""):
     """
@@ -255,6 +338,7 @@ def get_works():
 
 @app.route('/api/works', methods=['POST'])
 @log_function_call
+@require_auth
 def add_work():
     """Создает новую работу"""
     try:
@@ -292,6 +376,7 @@ def add_work():
 
 @app.route('/api/works/<work_id>', methods=['PUT'])
 @log_function_call
+@require_auth
 def update_work(work_id):
     """Обновляет существующую работу"""
     try:
@@ -328,6 +413,7 @@ def update_work(work_id):
 
 @app.route('/api/works/<work_id>', methods=['DELETE'])
 @log_function_call
+@require_auth
 def delete_work(work_id):
     try:
         works = load_works()
@@ -351,6 +437,7 @@ def delete_work(work_id):
 
 @app.route('/api/works/<work_id>/images', methods=['POST'])
 @log_function_call
+@require_auth
 def upload_image(work_id):
     """Загружает и обрабатывает изображение для работы"""
     try:
@@ -417,6 +504,7 @@ def upload_image(work_id):
 
 @app.route('/api/works/<work_id>/images/<filename>', methods=['DELETE'])
 @log_function_call
+@require_auth
 def delete_image(work_id, filename):
     try:
         works = load_works()

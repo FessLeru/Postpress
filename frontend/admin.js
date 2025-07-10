@@ -6,6 +6,125 @@ let workToDelete = null;
 let selectedImages = [];
 let existingImages = [];
 
+// ========================================
+// AUTHENTICATION FUNCTIONS
+// ========================================
+
+let isAuthenticated = false;
+
+async function checkAuthStatus() {
+    try {
+        const response = await fetch(`${API_BASE}/api/auth/status`, {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            isAuthenticated = data.authenticated;
+            
+            if (isAuthenticated) {
+                showAdminSection(data.user);
+                loadWorks();
+            } else {
+                showLoginSection();
+            }
+        } else {
+            showLoginSection();
+        }
+    } catch (error) {
+        console.error('Ошибка проверки авторизации:', error);
+        showLoginSection();
+    }
+}
+
+function showLoginSection() {
+    document.getElementById('loginSection').style.display = 'flex';
+    document.getElementById('adminSection').style.display = 'none';
+    isAuthenticated = false;
+}
+
+function showAdminSection(username) {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'block';
+    
+    if (username) {
+        document.getElementById('userInfo').textContent = `Привет, ${username}!`;
+    }
+    
+    isAuthenticated = true;
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const loginButton = document.getElementById('loginButton');
+    const loginText = loginButton.querySelector('.login-text');
+    const loginLoading = loginButton.querySelector('.login-loading');
+    const loginError = document.getElementById('loginError');
+    
+    // Показываем состояние загрузки
+    loginButton.disabled = true;
+    loginText.style.display = 'none';
+    loginLoading.style.display = 'inline';
+    loginError.style.display = 'none';
+    
+    const formData = new FormData(event.target);
+    const credentials = {
+        username: formData.get('username'),
+        password: formData.get('password')
+    };
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(credentials)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showAdminSection(data.user);
+            loadWorks();
+            showNotification('Авторизация успешна!');
+        } else {
+            loginError.textContent = data.message || 'Неверный логин или пароль';
+            loginError.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Ошибка авторизации:', error);
+        loginError.textContent = 'Ошибка соединения с сервером';
+        loginError.style.display = 'block';
+    } finally {
+        // Возвращаем кнопку в исходное состояние
+        loginButton.disabled = false;
+        loginText.style.display = 'inline';
+        loginLoading.style.display = 'none';
+    }
+}
+
+async function logout() {
+    try {
+        await fetch(`${API_BASE}/api/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        showLoginSection();
+        showNotification('Вы вышли из системы');
+        
+        // Очищаем данные
+        works = [];
+        
+    } catch (error) {
+        console.error('Ошибка выхода:', error);
+        showNotification('Ошибка при выходе', true);
+    }
+}
+
 // Show notification
 function showNotification(message, isError = false) {
     const notification = document.getElementById('notification');
@@ -50,7 +169,9 @@ async function loadWorks() {
         const worksGrid = document.getElementById('worksGrid');
         worksGrid.innerHTML = '<div class="loading">Загрузка работ...</div>';
         
-        const response = await fetch(`${API_BASE}/api/works`);
+        const response = await fetch(`${API_BASE}/api/works`, {
+            credentials: 'include'
+        });
         
         if (!response.ok) {
             const errorText = await response.text();
@@ -266,7 +387,8 @@ async function removeExistingImage(index) {
     if (currentWork) {
         try {
             const response = await fetch(`${API_BASE}/api/works/${currentWork.id}/images/${filename}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                credentials: 'include'
             });
             
             if (response.ok) {
@@ -348,6 +470,7 @@ async function handleWorkSave(event) {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify(workData)
             });
             
@@ -360,6 +483,7 @@ async function handleWorkSave(event) {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify(workData)
             });
             
@@ -380,6 +504,7 @@ async function handleWorkSave(event) {
             try {
                 const uploadResponse = await fetch(`${API_BASE}/api/works/${workId}/images`, {
                     method: 'POST',
+                    credentials: 'include',
                     body: imageFormData
                 });
                 
@@ -440,7 +565,8 @@ async function confirmDelete() {
     
     try {
         const response = await fetch(`${API_BASE}/api/works/${workToDelete}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         });
         
         if (!response.ok) throw new Error('Ошибка удаления работы');
@@ -457,7 +583,16 @@ async function confirmDelete() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadWorks();
+    console.log('Админ-панель загружена');
+    
+    // Setup login form
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Check authentication status
+    checkAuthStatus();
     
     // Add event listeners for form
     const imageInput = document.getElementById('imageInput');
