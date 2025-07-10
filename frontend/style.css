@@ -1162,12 +1162,11 @@ section {
    ======================================== */
 
 .footer {
-    background: rgba(9, 9, 11, 0.95);
+    background: #09090b; /* Убираем прозрачность для консистентности */
+    background-color: #09090b !important; /* Принудительно */
     color: var(--white);
     padding: 32px 0 24px 0; /* Фиксированные значения для консистентности */
     border-top: 1px solid rgba(220, 38, 38, 0.3);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px); /* Safari */
     box-sizing: border-box;
     position: relative;
     z-index: 1;
@@ -1176,6 +1175,9 @@ section {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Убираем проблемные свойства которые могут работать по-разному */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .footer-content {
@@ -1185,6 +1187,10 @@ section {
     box-sizing: border-box;
     width: 100%;
     position: relative;
+    background: transparent !important;
+    /* Принудительные сброс стилей */
+    border: none !important;
+    outline: none !important;
 }
 
 .footer-main {
@@ -2016,8 +2022,15 @@ section {
     }
 }
 
-/* Дополнительный медиа-запрос для очень широких экранов */
-@media screen and (min-width: 1400px) {
+/* Специальные правила для популярных разрешений */
+
+/* Full HD 1920x1080 и схожие разрешения */
+@media screen and (min-width: 1920px) {
+    .footer {
+        background: #09090b !important;
+        background-color: #09090b !important;
+    }
+    
     .footer-main {
         max-width: 1200px;
         margin: 0 auto;
@@ -2025,10 +2038,138 @@ section {
     }
     
     .footer-logo-section {
-        max-width: 350px;
+        max-width: 380px;
     }
     
     .footer-contact-section {
-        max-width: 250px;
+        max-width: 280px;
+    }
+    
+    .footer-requisites-section {
+        max-width: 500px;
+    }
+}
+
+/* 1440p и 4K мониторы */
+@media screen and (min-width: 2560px) {
+    .footer {
+        background: #09090b !important;
+        background-color: #09090b !important;
+    }
+    
+    .footer-content {
+        max-width: 1400px;
+    }
+    
+    .footer-main {
+        max-width: 1400px;
+        gap: 64px;
+    }
+}
+
+/* Стандартные ноутбуки 1366x768, 1440x900, 1600x900 */
+@media screen and (min-width: 1400px) and (max-width: 1919px) {
+    .footer {
+        background: #09090b !important;
+        background-color: #09090b !important;
+    }
+    
+    .footer-main {
+        max-width: 1200px;
+        margin: 0 auto;
+        gap: 40px;
+    }
+    
+    .footer-logo-section {
+        max-width: 320px;
+    }
+    
+    .footer-contact-section {
+        max-width: 240px;
+    }
+    
+    .footer-requisites-section {
+        max-width: 450px;
+    }
+}
+
+/* Принудительные стили для всех разрешений */
+@media screen {
+    .footer {
+        background: #09090b !important;
+        background-color: #09090b !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    /* Принудительные стили для всех дочерних элементов */
+    .footer *,
+    .footer *::before,
+    .footer *::after {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-sizing: border-box !important;
+    }
+    
+    .footer-content,
+    .footer-main,
+    .footer-logo-section,
+    .footer-contact-section,
+    .footer-requisites-section,
+    .requisites-compact,
+    .requisites-item,
+    .footer-bottom {
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Принудительные стили для текста */
+    .footer-logo {
+        color: #dc2626 !important;
+        font-size: 22px !important;
+        font-weight: 700 !important;
+        font-family: 'Playfair Display', serif !important;
+    }
+    
+    .footer-tagline {
+        color: #d4d4d4 !important;
+        font-size: 13px !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    .footer-contact-section h4,
+    .footer-requisites-section h4 {
+        color: #dc2626 !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    .footer-contact a {
+        color: #d4d4d4 !important;
+        font-size: 13px !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    .requisites-label {
+        color: #dc2626 !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    .requisites-value {
+        color: #e5e5e5 !important;
+        font-size: 12px !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    .footer-bottom p {
+        color: #a3a3a3 !important;
+        font-size: 12px !important;
+        font-family: 'Inter', sans-serif !important;
     }
 } 
