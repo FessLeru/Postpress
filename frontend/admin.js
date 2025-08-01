@@ -108,20 +108,39 @@ async function handleLogin(event) {
 
 async function logout() {
     try {
-        await fetch(`${API_BASE}/api/logout`, {
+        console.log('Выполняется выход из системы...');
+        
+        const response = await fetch(`${API_BASE}/api/logout`, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
         
+        console.log('Ответ сервера на logout:', response.status);
+        
+        // Даже если сервер вернул ошибку, все равно выходим локально
         showLoginSection();
         showNotification('Вы вышли из системы');
         
         // Очищаем данные
         works = [];
+        isAuthenticated = false;
+        
+        // Очищаем форму входа
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.reset();
+        }
         
     } catch (error) {
         console.error('Ошибка выхода:', error);
-        showNotification('Ошибка при выходе', true);
+        // Даже при ошибке сети выходим локально
+        showLoginSection();
+        showNotification('Вы вышли из системы');
+        works = [];
+        isAuthenticated = false;
     }
 }
 
@@ -589,6 +608,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Setup logout button with event listener (backup to onclick)
+    const logoutBtn = document.querySelector('.logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Logout button clicked via event listener');
+            logout();
+        });
     }
     
     // Check authentication status
