@@ -1,6 +1,12 @@
 # POSTPRESS - Сайт производителя элитной упаковки
 
-Современный одностраничный сайт для компании по производству элитной упаковки с административной панелью для управления портфолио.
+Современный одностраничный сайт для компании по производству элитной упаковки с **PHP административной панелью** для управления портфолио.
+
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-blue.svg)](https://php.net/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> **Полностью на PHP** - без Python зависимостей! Быстрый запуск одной командой.
 
 ## 📋 Содержание
 
@@ -9,6 +15,7 @@
 - [Структура проекта](#структура-проекта)
 - [Функционал](#функционал)
 - [Технические требования](#технические-требования)
+- [Быстрый запуск](#быстрый-запуск) - **[📖 Краткое руководство](QUICK_START.md)**
 - [Установка и запуск](#установка-и-запуск)
 - [Настройка email](#настройка-email)
 - [API документация](#api-документация)
@@ -19,23 +26,38 @@
 POSTPRESS - это корпоративный сайт компании по производству элитной упаковки, который включает:
 
 1. **Главный сайт** - одностраничник с портфолио и формой обратной связи
-2. **Админ-панель** - интерфейс для управления образцами упаковки и изображениями
-3. **API Backend** - REST API для работы с данными и отправки email
+2. **PHP Админ-панель** - безопасный интерфейс для управления образцами упаковки и изображениями
+3. **PHP API Backend** - REST API для работы с данными и отправки email
+
+### Ключевые особенности:
+
+- ✅ **Только PHP Backend** - без Python зависимостей
+- ✅ **Безопасная авторизация** - PHP сессии и хеширование паролей
+- ✅ **Современная админка** - интуитивный интерфейс управления
+- ✅ **Автоматическая оптимизация** - изображения сжимаются и изменяются под веб
+- ✅ **Email уведомления** - SMTP отправка контактных форм
+- ✅ **Docker развертывание** - запуск одной командой
+- ✅ **Адаптивный дизайн** - работает на всех устройствах
 
 ## 🏗️ Архитектура
 
-Проект построен по архитектуре **Frontend + Backend API**:
+Проект построен по архитектуре **Frontend + Backend API** через единый Nginx Proxy:
 
 ```
-┌─────────────────┐    HTTP API    ┌─────────────────┐
+┌─────────────────┐    HTTP Proxy   ┌─────────────────┐
 │   Frontend      │◄──────────────►│   Backend       │
-│   (Nginx)       │                │   (Flask)       │
-│   Port: 3000    │                │   Port: 5000    │
+│   (Nginx)       │                │   (PHP)         │
+│   Port: 3000    │                │   Port: 80      │
 └─────────────────┘                └─────────────────┘
 │                                  │
-├── index.html (сайт)              ├── app.py (API)
+├── index.html (сайт)              ├── index.php (API)
 ├── admin.html (админка)           ├── uploads/ (фото)
 └── static files                   └── data/ (JSON)
+         ▲                                    ▲
+         │          ┌─────────────────┐       │
+         └──────────┤  Nginx Proxy    │───────┘
+                    │  Port: 8080     │
+                    └─────────────────┘
 ```
 
 ### Основные компоненты:
@@ -45,23 +67,39 @@ POSTPRESS - это корпоративный сайт компании по п�
    - Основной сайт и админ-панель
    - Обслуживается через Nginx
 
-2. **Backend (Flask):**
+2. **Backend (PHP):**
    - REST API для CRUD операций
    - Загрузка и управление изображениями
    - Отправка email уведомлений
    - Хранение данных в JSON файлах
+   - Аутентификация и авторизация
+
+3. **Nginx Proxy:**
+   - Объединяет frontend и backend на одном домене
+   - Обрабатывает CORS заголовки
+   - Статические файлы и загруженные изображения
 
 ## 📁 Структура проекта
 
 ```
 Postpress/
-├── 📁 backend/                     # Backend приложение
-│   ├── 📄 app.py                   # Основной Flask API
-│   ├── 📄 requirements.txt         # Python зависимости
+├── 📁 backend-php/                 # PHP Backend приложение
+│   ├── 📄 index.php               # Основной PHP API
+│   ├── 📄 composer.json           # PHP зависимости
+│   ├── 📄 env.example             # Пример переменных окружения
 │   ├── 📄 Dockerfile              # Docker конфигурация
+│   ├── 📄 nginx.conf              # Конфигурация Nginx для PHP
+│   ├── 📁 src/                    # Исходный код PHP классов
+│   │   ├── 📄 Auth.php            # Аутентификация
+│   │   ├── 📄 Config.php          # Конфигурация
+│   │   ├── 📄 Works.php           # Работа с портфолио
+│   │   ├── 📄 ImageProcessor.php  # Обработка изображений
+│   │   ├── 📄 ContactForm.php     # Обработка контактных форм
+│   │   └── 📄 Logger.php          # Логирование
 │   ├── 📁 uploads/                # Папка для загруженных изображений
 │   └── 📁 data/                   # JSON файлы с данными
-│       └── 📄 works.json          # Данные об упаковке
+│       ├── 📄 works.json          # Данные об упаковке
+│       └── 📄 contacts.json       # Данные контактных форм
 │
 ├── 📁 frontend/                    # Frontend приложение
 │   ├── 📄 index.html              # Главная страница сайта
@@ -70,10 +108,12 @@ Postpress/
 │   ├── 📄 admin.css               # Стили админ-панели
 │   ├── 📄 script.js               # JavaScript основного сайта
 │   ├── 📄 admin.js                # JavaScript админ-панели
-│   ├── 📄 nginx.conf              # Конфигурация Nginx
+│   ├── 📄 nginx.conf              # Конфигурация Nginx для frontend
 │   └── 📄 Dockerfile              # Docker конфигурация
 │
 ├── 📄 docker-compose.yml           # Конфигурация для запуска всего проекта
+├── 📄 nginx-proxy.conf             # Конфигурация Nginx Proxy
+├── 📄 .env                         # Переменные окружения (создать из .env.example)
 └── 📄 README.md                    # Документация проекта
 ```
 
@@ -127,8 +167,68 @@ Postpress/
 ## 💻 Технические требования
 
 - **Docker** и **Docker Compose**
-- **Порты:** 3000 (frontend), 5000 (backend)
+- **Порты:** 8080 (главный, через nginx proxy), 3000 (frontend), 80 (backend)
+- **PHP:** 8.1 или выше с расширениями: GD, JSON, mbstring, session
 - **Email:** SMTP сервер для отправки заявок
+
+## 🚀 Быстрый запуск
+
+### Автоматический запуск скриптами:
+
+**Linux/Mac:**
+```bash
+# Клонирование проекта
+git clone <repository-url>
+cd Postpress
+
+# Автоматический запуск
+chmod +x start-postpress.sh
+./start-postpress.sh
+```
+
+**Windows:**
+```cmd
+# Клонирование проекта
+git clone <repository-url>
+cd Postpress
+
+# Автоматический запуск
+start-postpress.bat
+```
+
+### Ручной запуск:
+
+```bash
+# Клонирование проекта
+git clone <repository-url>
+cd Postpress
+
+# Создание .env файла
+cp backend-php/env.example .env
+
+# Редактирование .env файла (укажите свои данные)
+nano .env
+
+# Создание необходимых папок
+mkdir -p backend-php/uploads backend-php/data
+
+# Запуск проекта
+docker-compose up --build -d
+```
+
+### Доступ к проекту:
+
+- **🌐 Основной сайт:** http://localhost:8080
+- **👨‍💼 Админ-панель:** http://localhost:8080/admin.html
+  - Логин: `admin` (по умолчанию)
+  - Пароль: `admin123` (по умолчанию)
+- **📡 API:** http://localhost:8080/api/
+
+### Остановка проекта:
+
+```bash
+docker-compose down
+```
 
 ## 🚀 Установка и запуск
 
@@ -138,33 +238,15 @@ git clone <repository-url>
 cd Postpress
 ```
 
-### 2. Быстрое обновление дизайна
+### 2. Настройка переменных окружения
 
-**Для автоматического обновления используйте готовые скрипты:**
-
-#### Linux/Mac:
-```bash
-chmod +x update-design.sh
-./update-design.sh
-```
-
-#### Windows:
-```cmd
-update-design.bat
-```
-
-#### Или вручную:
-```bash
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-### 3. Настройка переменных окружения
-
-Создайте файл `.env` в корневой папке проекта:
+Создайте файл `.env` в корневой папке проекта на основе `backend-php/env.example`:
 
 ```env
+# Настройки администратора PHP
+LOGIN=admin
+PASSWORD=admin123
+
 # Email настройки для отправки заявок
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
@@ -172,12 +254,13 @@ SENDER_EMAIL=your-email@gmail.com
 SENDER_PASSWORD=your-app-password
 RECIPIENT_EMAIL=orders@postpress.ru
 
-# Flask настройки
-FLASK_ENV=production
-SECRET_KEY=your-secret-key-here
+# Настройки приложения
+SECRET_KEY=postpress-secret-key-2025
+DEBUG=true
+LOG_LEVEL=info
 ```
 
-### 4. Запуск проекта
+### 3. Запуск проекта
 
 ```bash
 # Сборка и запуск всех сервисов
@@ -187,16 +270,52 @@ docker-compose up --build
 docker-compose up -d --build
 ```
 
-### 5. Доступ к приложению
+### 4. Доступ к приложению
 
-- **Основной сайт:** http://localhost:3000
-- **Админ-панель:** http://localhost:3000/admin.html
-- **Backend API:** http://localhost:5000
+- **🌐 Основной сайт:** http://localhost:8080
+- **👨‍💼 PHP Админ-панель:** http://localhost:8080/admin.html
+  - Логин: используйте `LOGIN` из `.env` (по умолчанию: `admin`)
+  - Пароль: используйте `PASSWORD` из `.env` (по умолчанию: `admin123`)
+- **📡 PHP Backend API:** http://localhost:8080/api/
+- **⚙️ Прямой доступ к frontend:** http://localhost:3000 (для разработки)
+
+### 5. Работа с PHP админкой
+
+#### Вход в админку:
+1. Перейдите на http://localhost:8080/admin.html
+2. Введите логин и пароль из `.env` файла
+3. Нажмите "Войти"
+
+#### Возможности PHP админки:
+- **📸 Управление портфолио** - добавление, редактирование, удаление образцов упаковки
+- **🖼️ Загрузка изображений** - поддержка JPG, PNG, GIF (до 32MB)
+- **📝 Редактирование данных** - название, описание, характеристики упаковки
+- **🗂️ Просмотр заявок** - контактные формы с сайта
+- **🔐 Безопасность** - сессии PHP, проверка прав доступа
+
+#### Структура данных:
+- **Портфолио:** `backend-php/data/works.json`
+- **Контакты:** `backend-php/data/contacts.json`
+- **Изображения:** `backend-php/uploads/`
 
 ### 6. Остановка проекта
 
 ```bash
 docker-compose down
+```
+
+### 7. Обновление дизайна при разработке
+
+После изменения CSS/JS файлов:
+
+```bash
+# Быстрое обновление frontend
+docker-compose build --no-cache frontend
+docker-compose up -d frontend
+
+# Или полная пересборка
+docker-compose down
+docker-compose up --build -d
 ```
 
 ## 📧 Настройка email
@@ -219,6 +338,29 @@ docker-compose down
 - `RECIPIENT_EMAIL` - email получателя заявок
 
 ## 📚 API документация
+
+### Аутентификация (Auth)
+
+#### Вход в систему
+```http
+POST /api/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+#### Выход из системы
+```http
+POST /api/logout
+```
+
+#### Проверка статуса авторизации
+```http
+GET /api/auth/status
+```
 
 ### Упаковка (Works)
 
@@ -281,11 +423,22 @@ Content-Type: application/json
 
 ### Backend файлы:
 
-- **`app.py`** - Основной Flask сервер с API эндпоинтами
-- **`requirements.txt`** - Python библиотеки (Flask, Flask-CORS, etc.)
+- **`index.php`** - Основной PHP сервер с API эндпоинтами
+- **`composer.json`** - PHP библиотеки (PHPMailer, Monolog, etc.)
+- **`src/`** - Исходный код PHP классов
+  - **`Auth.php`** - Аутентификация и авторизация
+  - **`Config.php`** - Конфигурация приложения
+  - **`Works.php`** - Работа с портфолио
+  - **`ImageProcessor.php`** - Обработка изображений
+  - **`ContactForm.php`** - Обработка контактных форм
+  - **`Logger.php`** - Логирование событий
 - **`Dockerfile`** - Инструкции для создания Docker образа backend
+- **`nginx.conf`** - Конфигурация Nginx для PHP-FPM
+- **`env.example`** - Пример файла переменных окружения
 - **`uploads/`** - Папка для загруженных изображений упаковки
-- **`data/works.json`** - JSON файл с данными об упаковке
+- **`data/`** - JSON файлы с данными
+  - **`works.json`** - Данные об упаковке
+  - **`contacts.json`** - Данные контактных форм
 
 ### Frontend файлы:
 
@@ -300,8 +453,9 @@ Content-Type: application/json
 
 ### Конфигурационные файлы:
 
-- **`docker-compose.yml`** - Оркестрация frontend и backend сервисов
-- **`.env`** - Переменные окружения (email, секретные ключи)
+- **`docker-compose.yml`** - Оркестрация frontend, backend и nginx proxy сервисов
+- **`nginx-proxy.conf`** - Конфигурация Nginx для объединения frontend и backend
+- **`.env`** - Переменные окружения (email, секретные ключи, admin данные)
 
 ## 🛠️ Разработка
 
@@ -310,21 +464,41 @@ Content-Type: application/json
 После изменения файлов дизайна (CSS, HTML, JS) используйте:
 
 ```bash
-# Автоматическое обновление (рекомендуется)
-./update-design.sh    # Linux/Mac
-update-design.bat     # Windows
-
-# Или вручную
+# Обновление frontend
 docker-compose build --no-cache frontend
 docker-compose up -d frontend
+
+# Полная пересборка (при изменении PHP)
+docker-compose down
+docker-compose up --build -d
 ```
 
 ### Добавление новых функций:
 
-1. **API эндпоинты** - редактируйте `backend/app.py`
+1. **PHP API эндпоинты** - редактируйте `backend-php/index.php` или создайте новые классы в `backend-php/src/`
 2. **Стили сайта** - изменяйте `frontend/style.css`
 3. **Функционал админки** - модифицируйте `frontend/admin.js`
-4. **После изменений** - запустите скрипт обновления
+4. **PHP классы** - добавляйте в `backend-php/src/`
+5. **После изменений** - пересоберите соответствующий контейнер
+
+### Структура PHP Backend:
+
+```
+backend-php/
+├── index.php                   # Главный роутер API
+├── src/
+│   ├── Auth.php               # Аутентификация и авторизация
+│   ├── Config.php             # Конфигурация приложения
+│   ├── Works.php              # Управление портфолио
+│   ├── ImageProcessor.php     # Обработка изображений
+│   ├── ContactForm.php        # Обработка форм
+│   └── Logger.php             # Логирование
+├── data/
+│   ├── works.json             # Данные портфолио
+│   └── contacts.json          # Контактные формы
+├── uploads/                   # Загруженные изображения
+└── vendor/                    # Composer зависимости
+```
 
 ### Отладка:
 
@@ -332,20 +506,42 @@ docker-compose up -d frontend
 # Логи всех сервисов
 docker-compose logs
 
-# Логи только backend
+# Логи только PHP backend
 docker-compose logs backend
 
 # Логи только frontend
 docker-compose logs frontend
+
+# Логи в реальном времени
+docker-compose logs -f backend
+
+# Подключение к PHP контейнеру
+docker-compose exec backend bash
+```
+
+### Работа с PHP данными:
+
+```bash
+# Просмотр портфолио
+cat backend-php/data/works.json
+
+# Просмотр контактов
+cat backend-php/data/contacts.json
+
+# Очистка логов
+echo "" > backend-php/app.log
 ```
 
 ## 🔒 Безопасность
 
 - Все пользовательские данные валидируются
-- CORS настроен для безопасности
+- CORS настроен для безопасности через Nginx Proxy
 - Файлы загружаются только в определенную папку
 - Проверка типов загружаемых файлов
+- Аутентификация через сессии PHP
+- Хеширование паролей с солью
 - Nginx headers для дополнительной безопасности
+- Логирование всех запросов и ошибок
 
 ## 📱 Адаптивность
 
@@ -354,12 +550,120 @@ docker-compose logs frontend
 - Планшетов (768px-1199px)
 - Мобильных устройств (320px-767px)
 
+## 👨‍💼 PHP Админ-панель
+
+### Особенности PHP админки:
+
+1. **🔐 Безопасность:**
+   - Аутентификация через PHP сессии
+   - Проверка прав доступа на каждый запрос
+   - Хеширование паролей с солью
+   - Защита от CSRF атак
+
+2. **📸 Управление изображениями:**
+   - Автоматическое изменение размера (max 1920px)
+   - Оптимизация качества для веб (85%)
+   - Поддержка форматов: JPG, PNG, GIF
+   - Максимальный размер файла: 32MB
+
+3. **📊 Работа с данными:**
+   - JSON файлы для хранения данных
+   - Автоматическое резервное копирование
+   - UUID для уникальных идентификаторов
+   - Логирование всех операций
+
+4. **🎨 Интерфейс:**
+   - Современный адаптивный дизайн
+   - Drag & drop для загрузки файлов
+   - Модальные окна для редактирования
+   - Превью изображений
+
+### Доступ к PHP админке:
+
+```bash
+# URL админки
+http://localhost:8080/admin.html
+
+# Логин и пароль берутся из .env файла
+LOGIN=admin
+PASSWORD=admin123
+```
+
+### Возможности админки:
+
+- ✅ Добавление новых образцов упаковки
+- ✅ Редактирование существующих записей
+- ✅ Загрузка множественных изображений
+- ✅ Удаление образцов и изображений
+- ✅ Просмотр контактных форм
+- ✅ Управление характеристиками упаковки
+
 ## 🤝 Поддержка
 
 При возникновении проблем проверьте:
-1. Запущен ли Docker
-2. Свободны ли порты 3000 и 5000
-3. Правильно ли настроены email параметры в `.env`
-4. Создана ли папка `backend/uploads`
+1. **Docker:** Запущен ли Docker и Docker Compose
+2. **Порты:** Свободны ли порты 8080, 3000 и 80
+3. **Email:** Правильно ли настроены SMTP параметры в `.env`
+4. **Папки:** Создана ли папка `backend-php/uploads` с правами записи
+5. **Авторизация:** Правильно ли настроены LOGIN и PASSWORD в `.env`
+6. **Логи:** Проверьте `docker-compose logs backend` или `backend-php/app.log`
+7. **Права:** Убедитесь что Docker имеет права на чтение/запись в папки проекта
 
-Проект готов к продакшену и может быть легко развернут на любом сервере с Docker. 
+### Команды для диагностики:
+
+```bash
+# Проверка статуса контейнеров
+docker-compose ps
+
+# Логи PHP backend
+docker-compose logs backend
+
+# Перезапуск PHP backend
+docker-compose restart backend
+
+# Проверка портов
+netstat -tlnp | grep :8080
+
+# Проверка прав на папки
+ls -la backend-php/uploads/
+ls -la backend-php/data/
+```
+
+Проект готов к продакшену и может быть легко развернут на любом сервере с Docker.
+
+## ⚡ Быстрые команды
+
+```bash
+# Быстрый запуск проекта
+./start-postpress.sh             # Linux/Mac
+start-postpress.bat              # Windows
+
+# Основные команды
+docker-compose up -d --build     # Запуск
+docker-compose down              # Остановка
+docker-compose logs backend      # Логи PHP
+docker-compose restart backend   # Перезапуск PHP
+
+# Просмотр данных
+cat backend-php/data/works.json      # Портфолио
+cat backend-php/data/contacts.json   # Контакты
+ls -la backend-php/uploads/          # Изображения
+```
+
+## 🎯 Ключевые особенности PHP админки
+
+- ✅ **Безопасность:** PHP сессии, хеширование паролей, CSRF защита
+- ✅ **Производительность:** Оптимизация изображений, кеширование
+- ✅ **Удобство:** Drag & drop, модальные окна, превью
+- ✅ **Надежность:** Валидация данных, обработка ошибок, логирование
+- ✅ **Масштабируемость:** JSON хранилище, UUID идентификаторы
+
+## 📞 Контакты и поддержка
+
+- **📖 Документация:** См. [README.md](README.md) и [QUICK_START.md](QUICK_START.md)
+- **🚀 Продакшен:** См. [DEPLOYMENT.md](DEPLOYMENT.md) для развертывания
+- **📊 Логи:** `backend-php/app.log` или `docker-compose logs backend`
+- **📁 Данные:** `backend-php/data/` - JSON файлы с портфолио и контактами
+- **🖼️ Изображения:** `backend-php/uploads/` - загруженные файлы
+
+**Требования:** Docker, Docker Compose, свободные порты 8080, 3000, 80 
