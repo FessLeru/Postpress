@@ -9,9 +9,9 @@ RUN apt-get update && \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем и устанавливаем Python зависимости (для лучшего кеширования)
+# Копируем и устанавливаем Python зависимости
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Создаем необходимые директории с правильными правами
 RUN mkdir -p uploads data && \
@@ -37,4 +37,5 @@ EXPOSE 5000
 USER nobody
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "app.py"] 
+# Запускаем Flask приложение через gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "app:app"] 

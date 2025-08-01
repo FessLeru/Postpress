@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # Python Backend
+  # Python Flask Backend
   backend:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: postpress-php-backend
+    container_name: postpress-backend
     environment:
       - LOGIN=${LOGIN:-admin}
       - PASSWORD=${PASSWORD:-admin123}
@@ -19,14 +19,14 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - SECRET_KEY=${SECRET_KEY:-postpress-secret-key-2025}
     volumes:
-      - ./backend/uploads:/var/www/html/uploads:rw
-      - ./backend/data:/var/www/html/data:rw
-      - ./backend/app.log:/var/www/html/app.log:rw
+      - ./backend/uploads:/app/uploads:rw
+      - ./backend/data:/app/data:rw
+      - ./backend/app.log:/app/app.log:rw
     networks:
       - postpress-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -38,8 +38,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: postpress-frontend
-    ports:
-      - "3000:80"
     volumes:
       - ./backend/uploads:/usr/share/nginx/html/uploads:ro
     depends_on:
