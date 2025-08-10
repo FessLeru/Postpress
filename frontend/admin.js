@@ -7,6 +7,61 @@ let selectedImages = [];
 let existingImages = [];
 
 // ========================================
+// IMAGE PREPARATION (CLIENT-SIDE)
+// ========================================
+
+async function prepareImageForUpload(file) {
+    // Fallback: if not an image or canvas unsupported, return original
+    if (!file || (file.type && !file.type.startsWith('image/'))) return file;
+    try {
+        const url = URL.createObjectURL(file);
+        const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = url;
+        });
+        URL.revokeObjectURL(url);
+
+        // Target max edge to keep size reasonable before server-side processing
+        const maxEdge = 3000; // large but tames 8K photos
+        let { width, height } = img;
+        if (width === 0 || height === 0) return file;
+
+        let targetWidth = width;
+        let targetHeight = height;
+        if (Math.max(width, height) > maxEdge) {
+            const scale = maxEdge / Math.max(width, height);
+            targetWidth = Math.round(width * scale);
+            targetHeight = Math.round(height * scale);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return file;
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob(
+                (b) => resolve(b || file),
+                'image/jpeg',
+                0.9
+            );
+        });
+
+        if (!(blob instanceof Blob)) return file;
+        // Wrap into File to keep a filename (backend ignores it anyway)
+        const filename = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg';
+        return new File([blob], filename, { type: 'image/jpeg' });
+    } catch (e) {
+        console.warn('prepareImageForUpload fallback to original due to error:', e);
+        return file;
+    }
+}
+
+// ========================================
 // AUTHENTICATION FUNCTIONS
 // ========================================
 
@@ -509,7 +564,8 @@ async function handleWorkSave(event) {
         let errorCount = 0;
         
         for (let i = 0; i < selectedImages.length; i++) {
-            const image = selectedImages[i];
+            const originalImage = selectedImages[i];
+            const image = await prepareImageForUpload(originalImage);
             const imageFormData = new FormData();
             imageFormData.append('image', image);
             
@@ -525,9 +581,15 @@ async function handleWorkSave(event) {
                     uploadedCount++;
                     console.log(`Загружено изображение: ${result.filename}`);
                 } else {
-                    const error = await uploadResponse.json();
-                    console.error(`Ошибка загрузки изображения "${image.name}":`, error.error);
-                    showNotification(`Ошибка загрузки "${image.name}": ${error.error}`, true);
+                    let errorText = '';
+                    try {
+                        const error = await uploadResponse.json();
+                        errorText = error && (error.error || error.message) || '';
+                    } catch (_) {
+                        errorText = await uploadResponse.text();
+                    }
+                    console.error(`Ошибка загрузки изображения "${image.name}":`, errorText);
+                    showNotification(`Ошибка загрузки "${image.name}": ${errorText || 'Неизвестная ошибка'}`, true);
                     errorCount++;
                 }
             } catch (error) {

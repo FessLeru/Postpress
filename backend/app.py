@@ -37,6 +37,11 @@ logging.basicConfig(
     handlers=handlers
 )
 logger = logging.getLogger(__name__)
+try:
+    Image.MAX_IMAGE_PIXELS = None
+    logger.info("[IMAGES] MAX_IMAGE_PIXELS отключен (разрешены большие изображения)")
+except Exception as e:
+    logger.warning(f"[IMAGES] Не удалось отключить MAX_IMAGE_PIXELS: {e}")
 
 # Middleware для логирования всех запросов
 @app.before_request
