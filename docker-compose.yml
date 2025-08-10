@@ -5,6 +5,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: postpress-backend
+    user: "0:0"
     environment:
       - LOGIN=${LOGIN:-admin}
       - PASSWORD=${PASSWORD:-admin123}
