@@ -61,6 +61,45 @@ async function prepareImageForUpload(file) {
     }
 }
 
+// Helper: upload single image to specific work
+async function uploadImageToWork(workId, file) {
+    const prepared = await prepareImageForUpload(file);
+    const fd = new FormData();
+    fd.append('image', prepared);
+    const resp = await fetch(`${API_BASE}/api/works/${workId}/images`, {
+        method: 'POST',
+        credentials: 'include',
+        body: fd
+    });
+    if (!resp.ok) {
+        let errText = '';
+        try { const j = await resp.json(); errText = j.error || j.message || ''; } catch {}
+        throw new Error(errText || `HTTP ${resp.status}`);
+    }
+    return resp.json();
+}
+
+function renderImagePreview() {
+    const imagePreview = document.getElementById('imagePreview');
+    if (!imagePreview) return;
+    const existingHtml = existingImages.map((filename, idx) => `
+        <div class="image-preview-item">
+            <img src="${API_BASE}/uploads/${filename}" alt="Изображение" class="image-preview-img">
+            <button type="button" class="image-preview-remove" onclick="removeExistingImage(${idx})">&times;</button>
+        </div>
+    `).join('');
+    const selectedHtml = selectedImages.map((file, idx) => {
+        const url = URL.createObjectURL(file);
+        return `
+            <div class="image-preview-item">
+                <img src="${url}" alt="Новое изображение" class="image-preview-img">
+                <button type="button" class="image-preview-remove" onclick="removeSelectedImage(${idx})">&times;</button>
+            </div>
+        `;
+    }).join('');
+    imagePreview.innerHTML = existingHtml + selectedHtml;
+}
+
 // ========================================
 // AUTHENTICATION FUNCTIONS
 // ========================================
@@ -368,56 +407,37 @@ function hideWorkModal() {
 
 // Handle image selection (инициализация перенесена в основной блок DOMContentLoaded)
 
-function handleImageSelection(event) {
+async function handleImageSelection(event) {
     const files = Array.from(event.target.files);
     const maxSize = 32 * 1024 * 1024; // 32MB
-    
-    files.forEach(file => {
-        // Проверяем размер файла
+    for (const file of files) {
         if (file.size > maxSize) {
             showNotification(`Файл "${file.name}" слишком большой. Максимальный размер: 32MB`, true);
-            return;
+            continue;
         }
-        
         if (file.size === 0) {
             showNotification(`Файл "${file.name}" поврежден или пуст`, true);
-            return;
+            continue;
         }
-        
-        // Проверяем количество изображений
-        if (selectedImages.length >= 10) {
-            showNotification('Максимальное количество изображений: 10', true);
-            return;
+        if (!currentWork) {
+            if (selectedImages.length >= 10) {
+                showNotification('Максимальное количество изображений: 10', true);
+                continue;
+            }
+            selectedImages.push(file);
+            renderImagePreview();
+        } else {
+            try {
+                const result = await uploadImageToWork(currentWork.id, file);
+                existingImages.push(result.filename);
+                renderImagePreview();
+                showNotification('Изображение добавлено');
+            } catch (e) {
+                console.error('Ошибка загрузки:', e);
+                showNotification(`Ошибка загрузки "${file.name}": ${e.message}`, true);
+            }
         }
-        
-        selectedImages.push(file);
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const imagePreview = document.getElementById('imagePreview');
-            const index = selectedImages.length - 1;
-            
-            const imageItem = document.createElement('div');
-            imageItem.className = 'image-preview-item';
-            imageItem.innerHTML = `
-                <img src="${e.target.result}" alt="Новое изображение" class="image-preview-img">
-                <button type="button" class="image-preview-remove" onclick="removeSelectedImage(${index})">&times;</button>
-                <div class="image-info">
-                    <small>${file.name}</small>
-                    <small>${(file.size / 1024 / 1024).toFixed(2)} MB</small>
-                </div>
-            `;
-            
-            imagePreview.appendChild(imageItem);
-        };
-        
-        reader.onerror = () => {
-            showNotification(`Ошибка чтения файла "${file.name}"`, true);
-        };
-        
-        reader.readAsDataURL(file);
-    });
-    
+    }
     event.target.value = '';
 }
 
