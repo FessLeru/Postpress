@@ -315,16 +315,9 @@ function hideWorkModal() {
 
 function handleImageSelection(event) {
     const files = Array.from(event.target.files);
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'];
     const maxSize = 32 * 1024 * 1024; // 32MB
     
     files.forEach(file => {
-        // Проверяем тип файла
-        if (!allowedTypes.includes(file.type)) {
-            showNotification(`Файл "${file.name}" имеет неподдерживаемый формат. Разрешены: JPG, PNG, GIF, WebP, BMP, TIFF`, true);
-            return;
-        }
-        
         // Проверяем размер файла
         if (file.size > maxSize) {
             showNotification(`Файл "${file.name}" слишком большой. Максимальный размер: 32MB`, true);

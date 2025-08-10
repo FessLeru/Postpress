@@ -83,7 +83,7 @@ def log_function_call(func):
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 DATA_FOLDER = os.path.join(BASE_DIR, 'data')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'heic', 'heif', 'avif', 'jfif'}
 MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32MB
 THUMBNAIL_SIZE = (800, 600)  # Фиксированный размер для всех изображений
 JPEG_QUALITY = 85  # Оптимальное качество для веба
@@ -96,9 +96,17 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
+# Регистрируем поддержку HEIC/HEIF/AVIF в Pillow, если доступно
+try:
+    import pillow_heif  # type: ignore
+    pillow_heif.register_heif_opener()
+    logger.info("[IMAGES] pillow-heif зарегистрирован (HEIC/HEIF/AVIF поддерживаются)")
+except Exception as e:
+    logger.warning(f"[IMAGES] Не удалось зарегистрировать pillow-heif: {e}")
+
 def allowed_file(filename):
-    """Проверяет допустимость расширения файла"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    """Всегда разрешаем файл; фактическая проверка формата произойдет при попытке открыть изображение."""
+    return True
 
 def process_and_convert_image(file):
     """
@@ -109,9 +117,7 @@ def process_and_convert_image(file):
         # Открываем изображение с помощью PIL
         image = Image.open(file.stream)
         
-        # Проверяем минимальный размер
-        if image.size[0] < MIN_IMAGE_SIZE[0] or image.size[1] < MIN_IMAGE_SIZE[1]:
-            raise ValueError(f"Изображение слишком маленькое. Минимальный размер: {MIN_IMAGE_SIZE[0]}x{MIN_IMAGE_SIZE[1]} пикселей")
+        # Убираем проверку минимального размера: принимаем любое изображение
         
         # Конвертируем в RGB (необходимо для JPG)
         if image.mode in ('RGBA', 'LA', 'P'):
