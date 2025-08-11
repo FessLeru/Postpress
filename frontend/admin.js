@@ -538,36 +538,12 @@ async function handleWorkSave(event) {
         
         for (let i = 0; i < selectedImages.length; i++) {
             const originalImage = selectedImages[i];
-            const image = await prepareImageForUpload(originalImage);
-            const imageFormData = new FormData();
-            imageFormData.append('image', image);
-            
             try {
-                const uploadResponse = await fetch(`${API_BASE}/api/works/${workId}/images`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: imageFormData
-                });
-                
-                if (uploadResponse.ok) {
-                    const result = await uploadResponse.json();
-                    uploadedCount++;
-                    console.log(`Загружено изображение: ${result.filename}`);
-                } else {
-                    let errorText = '';
-                    try {
-                        const error = await uploadResponse.json();
-                        errorText = error && (error.error || error.message) || '';
-                    } catch (_) {
-                        errorText = await uploadResponse.text();
-                    }
-                    console.error(`Ошибка загрузки изображения "${image.name}":`, errorText);
-                    showNotification(`Ошибка загрузки "${image.name}": ${errorText || 'Неизвестная ошибка'}`, true);
-                    errorCount++;
-                }
-            } catch (error) {
-                console.error(`Критическая ошибка загрузки "${image.name}":`, error);
-                showNotification(`Критическая ошибка загрузки "${image.name}"`, true);
+                await uploadImageToWork(workId, originalImage);
+                uploadedCount++;
+            } catch (e) {
+                console.error('Ошибка загрузки:', e);
+                showNotification(`Ошибка загрузки "${originalImage.name}": ${e.message}`, true);
                 errorCount++;
             }
         }
@@ -582,6 +558,8 @@ async function handleWorkSave(event) {
         }
         
         showNotification(currentWork ? 'Работа обновлена' : 'Работа добавлена');
+        // Очистим выбранные локально изображения, чтобы не дублировать при следующем сохранении
+        selectedImages = [];
         hideWorkModal();
         loadWorks();
         
