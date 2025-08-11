@@ -7,13 +7,15 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
+from werkzeug.datastructures import FileStorage
 import uuid
-from PIL import Image
+from PIL import Image, ImageOps, ImageFile
 import io
 import pathlib
 import logging
 from functools import wraps
 import hashlib
+from typing import Tuple
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'postpress-secret-key-2025')
@@ -39,6 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 try:
     Image.MAX_IMAGE_PIXELS = None
+    ImageFile.LOAD_TRUNCATED_IMAGES = True  # Позволяет открывать частично поврежденные JPEG
     logger.info("[IMAGES] MAX_IMAGE_PIXELS отключен (разрешены большие изображения)")
 except Exception as e:
     logger.warning(f"[IMAGES] Не удалось отключить MAX_IMAGE_PIXELS: {e}")
@@ -109,58 +112,81 @@ try:
 except Exception as e:
     logger.warning(f"[IMAGES] Не удалось зарегистрировать pillow-heif: {e}")
 
-def allowed_file(filename):
-    """Всегда разрешаем файл; фактическая проверка формата произойдет при попытке открыть изображение."""
+def allowed_file(filename: str) -> bool:
+    """Возвращает True для любых входящих файлов.
+
+    Мы не блокируем расширения на уровне проверки. Фактическая валидация
+    и попытка декодирования выполняются позже в процессе обработки.
+
+    Args:
+        filename: Имя файла из формы.
+
+    Returns:
+        bool: Всегда True, чтобы не блокировать редкие форматы.
+    """
     return True
 
-def process_and_convert_image(file):
-    """
-    Обрабатывает изображение: конвертирует в JPG, 
-    стандартизирует размер и качество
+def process_and_convert_image(file: FileStorage) -> tuple[io.BytesIO, tuple[int, int], str]:
+    """Безопасно обрабатывает изображение и возвращает JPEG 800×600.
+
+    Включает поддержку EXIF-ориентации, палитровых/прозрачных/CMYK изображений,
+    обрезку/вписывание без ошибок и сохранение с приемлемым качеством.
+
+    Если файл невозможно декодировать Pillow, функция возбуждает ValueError,
+    а вызывающий код выполнит сохранение «как есть».
+
+    Args:
+        file: Файл, полученный из формы (`werkzeug.datastructures.FileStorage`).
+
+    Returns:
+        tuple[BytesIO, (int, int), str]: Буфер JPEG, итоговый размер, расширение "jpg".
     """
     try:
-        # Открываем изображение с помощью PIL
-        image = Image.open(file.stream)
-        
-        # Убираем проверку минимального размера: принимаем любое изображение
-        
-        # Конвертируем в RGB (необходимо для JPG)
-        if image.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', image.size, (255, 255, 255))
-            if image.mode == 'P':
-                image = image.convert('RGBA')
-            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-            image = background
-        elif image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Создаем копию с правильными пропорциями
-        aspect_ratio = THUMBNAIL_SIZE[0] / THUMBNAIL_SIZE[1]
-        current_ratio = image.size[0] / image.size[1]
-        
-        if current_ratio > aspect_ratio:
-            # Изображение слишком широкое
-            new_width = int(image.size[1] * aspect_ratio)
-            left = (image.size[0] - new_width) // 2
-            image = image.crop((left, 0, left + new_width, image.size[1]))
-        else:
-            # Изображение слишком высокое
-            new_height = int(image.size[0] / aspect_ratio)
-            top = (image.size[1] - new_height) // 2
-            image = image.crop((0, top, image.size[0], top + new_height))
-        
-        # Изменяем размер до стандартного
-        image = image.resize(THUMBNAIL_SIZE, Image.Resampling.LANCZOS)
-        
-        # Сохраняем в байтовый поток
+        # Читаем байты один раз и работаем из памяти, чтобы избежать проблем с указателем
+        file.stream.seek(0)
+        data = file.read()
+        if not data:
+            raise ValueError("Пустой файл")
+
+        img = Image.open(io.BytesIO(data))
+
+        # Авто-поворот по EXIF и материализация пикселей
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+
+        # Приводим к RGB с учетом возможной прозрачности
+        if img.mode in ("RGBA", "LA"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode == "P":
+            img = img.convert("RGBA")
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+
+        # Вписываем изображение в 800×600 без искажений (letterbox)
+        target_w, target_h = THUMBNAIL_SIZE
+        img_copy = img.copy()
+        img_copy.thumbnail((target_w, target_h), Image.Resampling.LANCZOS)
+
+        canvas = Image.new("RGB", (target_w, target_h), (255, 255, 255))
+        paste_x = (target_w - img_copy.width) // 2
+        paste_y = (target_h - img_copy.height) // 2
+        canvas.paste(img_copy, (paste_x, paste_y))
+
+        # Кодируем в JPEG
         output = io.BytesIO()
-        image.save(output, format='JPEG', quality=JPEG_QUALITY, optimize=True)
+        canvas.save(output, format="JPEG", quality=JPEG_QUALITY, optimize=True)
         output.seek(0)
-        
-        return output, THUMBNAIL_SIZE
-        
-    except Exception as e:
-        raise ValueError(f"Ошибка обработки изображения: {str(e)}")
+        return output, THUMBNAIL_SIZE, "jpg"
+
+    except Exception as exc:
+        raise ValueError(f"Ошибка обработки изображения: {exc}")
 
 @log_function_call
 def load_works():
@@ -479,19 +505,27 @@ def upload_image(work_id):
         if file_size == 0:
             return jsonify({'error': 'Файл поврежден или пуст'}), 400
             
-        # Обрабатываем и конвертируем изображение
+        # Обрабатываем и конвертируем изображение. Если Pillow не справился — сохраняем как есть.
         try:
-            processed_image, image_size = process_and_convert_image(file)
-        except ValueError as e:
-            return jsonify({'error': str(e)}), 400
-        
-        # Генерируем уникальное имя файла с расширением .jpg
-        filename = f"{uuid.uuid4()}.jpg"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        
-        # Сохраняем обработанное изображение
-        with open(file_path, 'wb') as f:
-            f.write(processed_image.getvalue())
+            processed_image, image_size, ext = process_and_convert_image(file)
+            filename = f"{uuid.uuid4()}.{ext}"
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            with open(file_path, 'wb') as f:
+                f.write(processed_image.getvalue())
+        except ValueError:
+            # Fallback: сохраняем оригинал без перекодирования, чтобы гарантировать сохранность фото
+            file.stream.seek(0)
+            original_bytes = file.read()
+            if not original_bytes:
+                return jsonify({'error': 'Файл пустой'}), 400
+            original_ext = pathlib.Path(file.filename or '').suffix.lower().lstrip('.')
+            if not original_ext or len(original_ext) > 10:
+                original_ext = 'bin'
+            filename = f"{uuid.uuid4()}.{original_ext}"
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            with open(file_path, 'wb') as f:
+                f.write(original_bytes)
+            image_size = (0, 0)
         
         # Добавляем в список изображений работы
         if 'images' not in work:
@@ -506,7 +540,7 @@ def upload_image(work_id):
         return jsonify({
             'filename': filename,
             'size': image_size,
-            'message': 'Изображение успешно загружено и обработано'
+            'message': 'Изображение успешно загружено'
         }), 201
         
     except Exception as e:
