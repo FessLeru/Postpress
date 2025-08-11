@@ -119,10 +119,7 @@ except Exception as e:
     logger.warning(f"[IMAGES] Не удалось зарегистрировать pillow-heif: {e}")
 
 def save_uploaded_image(file: FileStorage) -> tuple[str, tuple[int, int]]:
-    """Сохраняет загруженное изображение как JPEG с UUID-именем.
-
-    Полностью игнорирует исходное имя файла; читает поток, поворачивает по EXIF,
-    приводит к RGB и сохраняет в папку `uploads` с именем `<uuid>.jpg`.
+    """Сохраняет загруженное изображение с детальным логированием ошибок.
 
     Args:
         file: Объект файла из `request.files`.
@@ -133,31 +130,62 @@ def save_uploaded_image(file: FileStorage) -> tuple[str, tuple[int, int]]:
     Raises:
         ValueError: Если файл пуст или не является изображением.
     """
+    logger.info(f"[UPLOAD] Начало загрузки файла: {getattr(file, 'filename', 'unknown')}")
+    
     try:
-        try:
-            file.stream.seek(0)
-        except Exception:
-            pass
-        raw = file.read()
-        if not raw:
-            raise ValueError("Пустой файл")
-
-        img = Image.open(io.BytesIO(raw))
+        # Сброс указателя файла
+        logger.info("[UPLOAD] Сброс указателя файла")
+        file.stream.seek(0)
+        
+        # Чтение данных
+        logger.info("[UPLOAD] Чтение данных файла")
+        raw_data = file.read()
+        data_size = len(raw_data)
+        logger.info(f"[UPLOAD] Прочитано байт: {data_size}")
+        
+        if data_size == 0:
+            raise ValueError("Файл пуст")
+        
+        if data_size > MAX_CONTENT_LENGTH:
+            raise ValueError(f"Файл слишком большой: {data_size} байт (максимум {MAX_CONTENT_LENGTH})")
+        
+        # Попытка открыть как изображение
+        logger.info("[UPLOAD] Попытка открыть как изображение")
+        img = Image.open(io.BytesIO(raw_data))
+        logger.info(f"[UPLOAD] Изображение открыто: {img.format}, размер: {img.size}, режим: {img.mode}")
+        
+        # Поворот по EXIF
         try:
             img = ImageOps.exif_transpose(img)
-        except Exception:
-            pass
-
-        if img.mode not in ("RGB",):
+            logger.info("[UPLOAD] EXIF поворот применен")
+        except Exception as e:
+            logger.warning(f"[UPLOAD] Не удалось применить EXIF поворот: {e}")
+        
+        # Конвертация в RGB
+        if img.mode != "RGB":
+            logger.info(f"[UPLOAD] Конвертация из {img.mode} в RGB")
             img = img.convert("RGB")
-
+        
         width, height = img.size
+        logger.info(f"[UPLOAD] Финальный размер: {width}x{height}")
+        
+        # Генерация имени файла
         filename = f"{uuid.uuid4().hex}.jpg"
-        path = os.path.join(UPLOAD_FOLDER, filename)
-        img.save(path, format="JPEG", quality=88, optimize=True)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        logger.info(f"[UPLOAD] Сохранение в: {filepath}")
+        
+        # Сохранение
+        img.save(filepath, format="JPEG", quality=85, optimize=True)
+        file_size = os.path.getsize(filepath)
+        logger.info(f"[UPLOAD] Файл сохранен, размер на диске: {file_size} байт")
+        
         return filename, (width, height)
+        
     except Exception as exc:
-        raise ValueError(f"Не удалось обработать изображение: {exc}")
+        logger.error(f"[UPLOAD] Ошибка при сохранении: {type(exc).__name__}: {exc}")
+        import traceback
+        logger.error(f"[UPLOAD] Трассировка: {traceback.format_exc()}")
+        raise ValueError(f"Ошибка обработки изображения: {exc}")
 
 # Старый вспомогательный ресайз удален — сохраняем оригинальный размер как JPEG
 
@@ -449,40 +477,72 @@ def delete_work(work_id):
 @log_function_call
 @require_auth
 def upload_image(work_id):
-    """Загрузка изображения с перекодированием в JPEG и UUID-именем."""
+    """Загрузка изображения с подробным логированием и обработкой ошибок."""
+    logger.info(f"[UPLOAD_API] Начало загрузки для работы: {work_id}")
+    
     try:
+        # Проверяем существование работы
         works = load_works()
         work = next((w for w in works if w['id'] == work_id), None)
         
         if not work:
+            logger.error(f"[UPLOAD_API] Работа с ID {work_id} не найдена")
             return jsonify({'error': 'Работа не найдена'}), 404
-            
-        if 'image' not in request.files or request.files.get('image') is None:
-            return jsonify({'error': 'Нет файла для загрузки'}), 400
-            
+        
+        logger.info(f"[UPLOAD_API] Работа найдена: {work.get('title', 'Без названия')}")
+        
+        # Проверяем наличие файла
+        logger.info(f"[UPLOAD_API] Проверка наличия файла в request.files")
+        logger.info(f"[UPLOAD_API] Ключи в request.files: {list(request.files.keys())}")
+        
+        if 'image' not in request.files:
+            logger.error("[UPLOAD_API] Ключ 'image' не найден в request.files")
+            return jsonify({'error': 'Нет файла для загрузки (ключ image отсутствует)'}), 400
+        
         file = request.files['image']
-        if not getattr(file, 'filename', None):
-            return jsonify({'error': 'Файл не выбран'}), 400
+        logger.info(f"[UPLOAD_API] Файл получен: {getattr(file, 'filename', 'unknown')}")
         
-        try:
-            filename, image_size = save_uploaded_image(file)
-        except ValueError as exc:
-            return jsonify({'error': str(exc)}), 400
+        if not file or not getattr(file, 'filename', None):
+            logger.error("[UPLOAD_API] Файл пуст или не выбран")
+            return jsonify({'error': 'Файл не выбран или пуст'}), 400
         
-        # Добавляем в список изображений работы
+        # Логирование информации о файле
+        logger.info(f"[UPLOAD_API] Имя файла: {file.filename}")
+        logger.info(f"[UPLOAD_API] Content-Type: {getattr(file, 'content_type', 'unknown')}")
+        
+        # Сохранение файла
+        logger.info("[UPLOAD_API] Вызов save_uploaded_image")
+        filename, image_size = save_uploaded_image(file)
+        logger.info(f"[UPLOAD_API] Файл сохранен: {filename}, размер: {image_size}")
+        
+        # Добавляем в работу
         if 'images' not in work:
             work['images'] = []
         work['images'].append(filename)
-        
-        # Добавляем метаданные изображения
         work['updated_at'] = datetime.now().isoformat()
         
-        save_works(works)
+        logger.info(f"[UPLOAD_API] Изображение добавлено к работе. Всего изображений: {len(work['images'])}")
         
-        return jsonify({'filename': filename, 'size': image_size, 'message': 'Изображение успешно загружено'}), 201
+        save_works(works)
+        logger.info("[UPLOAD_API] Данные сохранены в JSON")
+        
+        response_data = {
+            'filename': filename, 
+            'size': image_size, 
+            'message': 'Изображение успешно загружено'
+        }
+        logger.info(f"[UPLOAD_API] Успешный ответ: {response_data}")
+        
+        return jsonify(response_data), 201
+        
+    except ValueError as exc:
+        logger.error(f"[UPLOAD_API] Ошибка валидации: {exc}")
+        return jsonify({'error': str(exc)}), 400
         
     except Exception as e:
-        print(f"Ошибка загрузки изображения: {e}")
+        logger.error(f"[UPLOAD_API] Критическая ошибка: {type(e).__name__}: {e}")
+        import traceback
+        logger.error(f"[UPLOAD_API] Трассировка: {traceback.format_exc()}")
         return jsonify({'error': f'Внутренняя ошибка сервера: {str(e)}'}), 500
 
 @app.route('/api/works/<work_id>/images/<filename>', methods=['DELETE'])
