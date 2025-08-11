@@ -506,24 +506,24 @@ def upload_image(work_id):
             return jsonify({'error': 'Файл поврежден или пуст'}), 400
             
         # Сохраняем файл как есть, без изменения размера и перекодирования
-        file.stream.seek(0)
-        file_bytes = file.read()
-        if not file_bytes:
-            return jsonify({'error': 'Файл пустой'}), 400
-
         # Определяем расширение, сохраняем как оригинал
         original_ext = pathlib.Path(file.filename or '').suffix.lower().lstrip('.')
         if not original_ext or len(original_ext) > 10:
             original_ext = 'jpg'  # безопасное дефолтное расширение
         filename = f"{uuid.uuid4()}.{original_ext}"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
-        with open(file_path, 'wb') as f:
-            f.write(file_bytes)
+        # Убеждаемся, что указатель на начало и сохраняем поток напрямую
+        try:
+            file.stream.seek(0)
+        except Exception:
+            pass
+        file.save(file_path)
 
         # Пробуем получить размеры без изменения файла (не критично)
         image_size = (0, 0)
         try:
-            img = Image.open(io.BytesIO(file_bytes))
+            with Image.open(file_path) as img:
+                img.load()
             image_size = (img.width, img.height)
         except Exception:
             pass
