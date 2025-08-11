@@ -13,6 +13,7 @@ import io
 import logging
 from functools import wraps
 import hashlib
+import mimetypes
 from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__)
@@ -182,10 +183,29 @@ def save_uploaded_image(file: FileStorage) -> tuple[str, tuple[int, int]]:
         return filename, (width, height)
         
     except Exception as exc:
-        logger.error(f"[UPLOAD] Ошибка при сохранении: {type(exc).__name__}: {exc}")
-        import traceback
-        logger.error(f"[UPLOAD] Трассировка: {traceback.format_exc()}")
-        raise ValueError(f"Ошибка обработки изображения: {exc}")
+        # Фолбэк: сохраняем исходные байты без декодирования, чтобы не блокировать загрузку
+        logger.error(f"[UPLOAD] Не удалось обработать изображение Pillow: {type(exc).__name__}: {exc}")
+        try:
+            base = uuid.uuid4().hex
+            # Определяем расширение по исходному имени или mime-type
+            ext = (file.filename or '').rsplit('.', 1)[-1].lower() if '.' in (file.filename or '') else ''
+            if not ext:
+                guessed = mimetypes.guess_extension(getattr(file, 'mimetype', '') or '') or '.bin'
+                ext = guessed.lstrip('.')
+            if len(ext) > 8:
+                ext = 'bin'
+            filename = f"{base}.{ext}"
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            logger.info(f"[UPLOAD] Фолбэк-сохранение оригинальных байт в: {filepath}")
+            with open(filepath, 'wb') as f:
+                f.write(raw_data)
+            # Размеры неизвестны, возвращаем (0, 0)
+            return filename, (0, 0)
+        except Exception as save_exc:
+            import traceback
+            logger.error(f"[UPLOAD] Фолбэк тоже не удался: {type(save_exc).__name__}: {save_exc}")
+            logger.error(f"[UPLOAD] Трассировка: {traceback.format_exc()}")
+            raise ValueError(f"Ошибка сохранения файла: {save_exc}")
 
 # Старый вспомогательный ресайз удален — сохраняем оригинальный размер как JPEG
 
