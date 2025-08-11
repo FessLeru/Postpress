@@ -516,7 +516,7 @@ def upload_image(work_id):
         try:
             with Image.open(file_path) as img:
                 img.load()
-            image_size = (img.width, img.height)
+                image_size = (img.width, img.height)
         except Exception:
             pass
         
