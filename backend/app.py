@@ -10,11 +10,9 @@ from werkzeug.datastructures import FileStorage
 import uuid
 from PIL import Image, ImageOps, ImageFile
 import io
-import pathlib
 import logging
 from functools import wraps
 import hashlib
-import mimetypes
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'postpress-secret-key-2025')
@@ -111,114 +109,48 @@ try:
 except Exception as e:
     logger.warning(f"[IMAGES] Не удалось зарегистрировать pillow-heif: {e}")
 
-def allowed_file(filename: str) -> bool:
-    """Возвращает True для любых входящих файлов.
+def save_uploaded_image(file: FileStorage) -> tuple[str, tuple[int, int]]:
+    """Сохраняет загруженное изображение как JPEG с UUID-именем.
 
-    Мы не блокируем расширения на уровне проверки. Фактическая валидация
-    и попытка декодирования выполняются позже в процессе обработки.
-
-    Args:
-        filename: Имя файла из формы.
-
-    Returns:
-        bool: Всегда True, чтобы не блокировать редкие форматы.
-    """
-    return True
-
-def determine_safe_extension(file: FileStorage) -> str:
-    """Return a safe image extension for saving.
-
-    Tries, in order, to infer the extension from the original filename and the
-    MIME type provided by the client. If nothing reliable is found, defaults to
-    'jpg'. The result is normalized (e.g., 'jpeg' -> 'jpg', 'jpe' -> 'jpg').
+    Полностью игнорирует исходное имя файла; читает поток, поворачивает по EXIF,
+    приводит к RGB и сохраняет в папку `uploads` с именем `<uuid>.jpg`.
 
     Args:
-        file: Incoming uploaded file instance.
+        file: Объект файла из `request.files`.
 
     Returns:
-        str: Lowercase extension without a leading dot.
-    """
-    original_ext = pathlib.Path((file.filename or '').strip()).suffix.lower().lstrip('.')
-    mime_ext = (mimetypes.guess_extension(file.mimetype or '', strict=False) or '').lstrip('.')
+        tuple[str, tuple[int, int]]: Имя сохраненного файла и размер (ширина, высота).
 
-    normalization_map = {
-        'jpeg': 'jpg',
-        'jpe': 'jpg',
-        'jfif': 'jpg',
-        'tif': 'tiff',
-    }
-
-    candidates = [original_ext, mime_ext]
-    for ext in candidates:
-        if not ext:
-            continue
-        normalized = normalization_map.get(ext, ext)
-        if normalized in ALLOWED_EXTENSIONS:
-            return normalized
-
-    return 'jpg'
-
-def process_and_convert_image(file: FileStorage) -> tuple[io.BytesIO, tuple[int, int], str]:
-    """Безопасно обрабатывает изображение и возвращает JPEG 800×600.
-
-    Включает поддержку EXIF-ориентации, палитровых/прозрачных/CMYK изображений,
-    обрезку/вписывание без ошибок и сохранение с приемлемым качеством.
-
-    Если файл невозможно декодировать Pillow, функция возбуждает ValueError,
-    а вызывающий код выполнит сохранение «как есть».
-
-    Args:
-        file: Файл, полученный из формы (`werkzeug.datastructures.FileStorage`).
-
-    Returns:
-        tuple[BytesIO, (int, int), str]: Буфер JPEG, итоговый размер, расширение "jpg".
+    Raises:
+        ValueError: Если файл пуст или не является изображением.
     """
     try:
-        # Читаем байты один раз и работаем из памяти, чтобы избежать проблем с указателем
-        file.stream.seek(0)
-        data = file.read()
-        if not data:
+        try:
+            file.stream.seek(0)
+        except Exception:
+            pass
+        raw = file.read()
+        if not raw:
             raise ValueError("Пустой файл")
 
-        img = Image.open(io.BytesIO(data))
-
-        # Авто-поворот по EXIF и материализация пикселей
+        img = Image.open(io.BytesIO(raw))
         try:
             img = ImageOps.exif_transpose(img)
         except Exception:
             pass
 
-        # Приводим к RGB с учетом возможной прозрачности
-        if img.mode in ("RGBA", "LA"):
-            background = Image.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[-1])
-            img = background
-        elif img.mode == "P":
-            img = img.convert("RGBA")
-            background = Image.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[-1])
-            img = background
-        elif img.mode != "RGB":
+        if img.mode not in ("RGB",):
             img = img.convert("RGB")
 
-        # Вписываем изображение в 800×600 без искажений (letterbox)
-        target_w, target_h = THUMBNAIL_SIZE
-        img_copy = img.copy()
-        img_copy.thumbnail((target_w, target_h), Image.Resampling.LANCZOS)
-
-        canvas = Image.new("RGB", (target_w, target_h), (255, 255, 255))
-        paste_x = (target_w - img_copy.width) // 2
-        paste_y = (target_h - img_copy.height) // 2
-        canvas.paste(img_copy, (paste_x, paste_y))
-
-        # Кодируем в JPEG
-        output = io.BytesIO()
-        canvas.save(output, format="JPEG", quality=JPEG_QUALITY, optimize=True)
-        output.seek(0)
-        return output, THUMBNAIL_SIZE, "jpg"
-
+        width, height = img.size
+        filename = f"{uuid.uuid4().hex}.jpg"
+        path = os.path.join(UPLOAD_FOLDER, filename)
+        img.save(path, format="JPEG", quality=88, optimize=True)
+        return filename, (width, height)
     except Exception as exc:
-        raise ValueError(f"Ошибка обработки изображения: {exc}")
+        raise ValueError(f"Не удалось обработать изображение: {exc}")
+
+# Старый вспомогательный ресайз удален — сохраняем оригинальный размер как JPEG
 
 @log_function_call
 def load_works():
@@ -508,18 +440,7 @@ def delete_work(work_id):
 @log_function_call
 @require_auth
 def upload_image(work_id):
-    """Upload a single image for a work and save it unchanged.
-
-    - Accepts any filename (spaces, non-ASCII, parentheses). The stored name is
-      a UUID with a validated extension.
-    - Size limit is enforced by Flask via MAX_CONTENT_LENGTH.
-
-    Args:
-        work_id: Work identifier to attach the image to.
-
-    Returns:
-        JSON containing the stored filename and detected size.
-    """
+    """Загрузка изображения с перекодированием в JPEG и UUID-именем."""
     try:
         works = load_works()
         work = next((w for w in works if w['id'] == work_id), None)
@@ -533,31 +454,11 @@ def upload_image(work_id):
         file = request.files['image']
         if not getattr(file, 'filename', None):
             return jsonify({'error': 'Файл не выбран'}), 400
-            
-        if not file or not allowed_file(file.filename):
-            return jsonify({'error': f'Неподдерживаемый формат файла. Поддерживаются: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
         
-        # Размер проверяется самим Flask по MAX_CONTENT_LENGTH. Дополнительных seek/tell не делаем
-            
-        # Сохраняем файл как есть с UUID-именем и безопасным расширением
-        ext = determine_safe_extension(file)
-        filename = f"{uuid.uuid4()}.{ext}"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        # Убеждаемся, что указатель на начало и сохраняем поток напрямую
         try:
-            file.stream.seek(0)
-        except Exception:
-            pass
-        file.save(file_path)
-
-        # Пробуем получить размеры без изменения файла (не критично)
-        image_size = (0, 0)
-        try:
-            with Image.open(file_path) as img:
-                img.load()
-                image_size = (img.width, img.height)
-        except Exception:
-            pass
+            filename, image_size = save_uploaded_image(file)
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
         
         # Добавляем в список изображений работы
         if 'images' not in work:
