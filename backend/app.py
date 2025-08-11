@@ -6,7 +6,6 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 import uuid
 from PIL import Image, ImageOps, ImageFile
@@ -15,7 +14,7 @@ import pathlib
 import logging
 from functools import wraps
 import hashlib
-from typing import Tuple
+import mimetypes
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'postpress-secret-key-2025')
@@ -125,6 +124,39 @@ def allowed_file(filename: str) -> bool:
         bool: Всегда True, чтобы не блокировать редкие форматы.
     """
     return True
+
+def determine_safe_extension(file: FileStorage) -> str:
+    """Return a safe image extension for saving.
+
+    Tries, in order, to infer the extension from the original filename and the
+    MIME type provided by the client. If nothing reliable is found, defaults to
+    'jpg'. The result is normalized (e.g., 'jpeg' -> 'jpg', 'jpe' -> 'jpg').
+
+    Args:
+        file: Incoming uploaded file instance.
+
+    Returns:
+        str: Lowercase extension without a leading dot.
+    """
+    original_ext = pathlib.Path((file.filename or '').strip()).suffix.lower().lstrip('.')
+    mime_ext = (mimetypes.guess_extension(file.mimetype or '', strict=False) or '').lstrip('.')
+
+    normalization_map = {
+        'jpeg': 'jpg',
+        'jpe': 'jpg',
+        'jfif': 'jpg',
+        'tif': 'tiff',
+    }
+
+    candidates = [original_ext, mime_ext]
+    for ext in candidates:
+        if not ext:
+            continue
+        normalized = normalization_map.get(ext, ext)
+        if normalized in ALLOWED_EXTENSIONS:
+            return normalized
+
+    return 'jpg'
 
 def process_and_convert_image(file: FileStorage) -> tuple[io.BytesIO, tuple[int, int], str]:
     """Безопасно обрабатывает изображение и возвращает JPEG 800×600.
@@ -476,7 +508,18 @@ def delete_work(work_id):
 @log_function_call
 @require_auth
 def upload_image(work_id):
-    """Загружает и обрабатывает изображение для работы"""
+    """Upload a single image for a work and save it unchanged.
+
+    - Accepts any filename (spaces, non-ASCII, parentheses). The stored name is
+      a UUID with a validated extension.
+    - Size limit is enforced by Flask via MAX_CONTENT_LENGTH.
+
+    Args:
+        work_id: Work identifier to attach the image to.
+
+    Returns:
+        JSON containing the stored filename and detected size.
+    """
     try:
         works = load_works()
         work = next((w for w in works if w['id'] == work_id), None)
@@ -496,13 +539,9 @@ def upload_image(work_id):
         
         # Размер проверяется самим Flask по MAX_CONTENT_LENGTH. Дополнительных seek/tell не делаем
             
-        # Сохраняем файл как есть, без изменения размера и перекодирования
-        # Определяем расширение, сохраняем как оригинал; чистим имя от опасных символов
-        safe_name = secure_filename(file.filename or '')
-        original_ext = pathlib.Path(safe_name).suffix.lower().lstrip('.')
-        if not original_ext or len(original_ext) > 10:
-            original_ext = 'jpg'  # безопасное дефолтное расширение
-        filename = f"{uuid.uuid4()}.{original_ext}"
+        # Сохраняем файл как есть с UUID-именем и безопасным расширением
+        ext = determine_safe_extension(file)
+        filename = f"{uuid.uuid4()}.{ext}"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         # Убеждаемся, что указатель на начало и сохраняем поток напрямую
         try:
