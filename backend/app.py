@@ -13,6 +13,7 @@ import io
 import logging
 from functools import wraps
 import hashlib
+from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'postpress-secret-key-2025')
@@ -89,7 +90,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 DATA_FOLDER = os.path.join(BASE_DIR, 'data')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'heic', 'heif', 'avif', 'jfif'}
-MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32MB
+MAX_CONTENT_LENGTH = 64 * 1024 * 1024  # 64MB
 THUMBNAIL_SIZE = (800, 600)  # Фиксированный размер для всех изображений
 JPEG_QUALITY = 85  # Оптимальное качество для веба
 MIN_IMAGE_SIZE = (400, 300)  # Минимальный размер изображения
@@ -100,6 +101,14 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 # Создаем папки если их нет
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(DATA_FOLDER, exist_ok=True)
+
+# Дружелюбная ошибка при превышении лимита загрузки
+@app.errorhandler(413)
+def handle_large_file(error):
+    return jsonify({
+        'error': 'Файл слишком большой. Максимальный размер 64MB.',
+        'code': 413
+    }), 413
 
 # Регистрируем поддержку HEIC/HEIF/AVIF в Pillow, если доступно
 try:
