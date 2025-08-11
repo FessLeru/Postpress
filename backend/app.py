@@ -505,27 +505,28 @@ def upload_image(work_id):
         if file_size == 0:
             return jsonify({'error': 'Файл поврежден или пуст'}), 400
             
-        # Обрабатываем и конвертируем изображение. Если Pillow не справился — сохраняем как есть.
+        # Сохраняем файл как есть, без изменения размера и перекодирования
+        file.stream.seek(0)
+        file_bytes = file.read()
+        if not file_bytes:
+            return jsonify({'error': 'Файл пустой'}), 400
+
+        # Определяем расширение, сохраняем как оригинал
+        original_ext = pathlib.Path(file.filename or '').suffix.lower().lstrip('.')
+        if not original_ext or len(original_ext) > 10:
+            original_ext = 'jpg'  # безопасное дефолтное расширение
+        filename = f"{uuid.uuid4()}.{original_ext}"
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        with open(file_path, 'wb') as f:
+            f.write(file_bytes)
+
+        # Пробуем получить размеры без изменения файла (не критично)
+        image_size = (0, 0)
         try:
-            processed_image, image_size, ext = process_and_convert_image(file)
-            filename = f"{uuid.uuid4()}.{ext}"
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            with open(file_path, 'wb') as f:
-                f.write(processed_image.getvalue())
-        except ValueError:
-            # Fallback: сохраняем оригинал без перекодирования, чтобы гарантировать сохранность фото
-            file.stream.seek(0)
-            original_bytes = file.read()
-            if not original_bytes:
-                return jsonify({'error': 'Файл пустой'}), 400
-            original_ext = pathlib.Path(file.filename or '').suffix.lower().lstrip('.')
-            if not original_ext or len(original_ext) > 10:
-                original_ext = 'bin'
-            filename = f"{uuid.uuid4()}.{original_ext}"
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            with open(file_path, 'wb') as f:
-                f.write(original_bytes)
-            image_size = (0, 0)
+            img = Image.open(io.BytesIO(file_bytes))
+            image_size = (img.width, img.height)
+        except Exception:
+            pass
         
         # Добавляем в список изображений работы
         if 'images' not in work:
@@ -537,11 +538,7 @@ def upload_image(work_id):
         
         save_works(works)
         
-        return jsonify({
-            'filename': filename,
-            'size': image_size,
-            'message': 'Изображение успешно загружено'
-        }), 201
+        return jsonify({'filename': filename, 'size': image_size, 'message': 'Изображение успешно загружено'}), 201
         
     except Exception as e:
         print(f"Ошибка загрузки изображения: {e}")
