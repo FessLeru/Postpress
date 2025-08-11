@@ -362,7 +362,7 @@ function hideWorkModal() {
 
 async function handleImageSelection(event) {
     const files = Array.from(event.target.files);
-    const maxSize = 32 * 1024 * 1024; // 32MB
+    const maxSize = 64 * 1024 * 1024 * 8; // 64MB
     for (const file of files) {
         if (file.size > maxSize) {
             showNotification(`Файл "${file.name}" слишком большой. Максимальный размер: 32MB`, true);
