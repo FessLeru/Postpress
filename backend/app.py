@@ -484,30 +484,22 @@ def upload_image(work_id):
         if not work:
             return jsonify({'error': 'Работа не найдена'}), 404
             
-        if 'image' not in request.files:
+        if 'image' not in request.files or request.files.get('image') is None:
             return jsonify({'error': 'Нет файла для загрузки'}), 400
             
         file = request.files['image']
-        if file.filename == '':
+        if not getattr(file, 'filename', None):
             return jsonify({'error': 'Файл не выбран'}), 400
             
         if not file or not allowed_file(file.filename):
             return jsonify({'error': f'Неподдерживаемый формат файла. Поддерживаются: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
         
-        # Проверяем размер файла
-        file.seek(0, 2)  # Переходим в конец файла
-        file_size = file.tell()
-        file.seek(0)  # Возвращаемся в начало
-        
-        if file_size > MAX_CONTENT_LENGTH:
-            return jsonify({'error': f'Файл слишком большой. Максимальный размер: {MAX_CONTENT_LENGTH // (1024*1024)}MB'}), 400
-        
-        if file_size == 0:
-            return jsonify({'error': 'Файл поврежден или пуст'}), 400
+        # Размер проверяется самим Flask по MAX_CONTENT_LENGTH. Дополнительных seek/tell не делаем
             
         # Сохраняем файл как есть, без изменения размера и перекодирования
-        # Определяем расширение, сохраняем как оригинал
-        original_ext = pathlib.Path(file.filename or '').suffix.lower().lstrip('.')
+        # Определяем расширение, сохраняем как оригинал; чистим имя от опасных символов
+        safe_name = secure_filename(file.filename or '')
+        original_ext = pathlib.Path(safe_name).suffix.lower().lstrip('.')
         if not original_ext or len(original_ext) > 10:
             original_ext = 'jpg'  # безопасное дефолтное расширение
         filename = f"{uuid.uuid4()}.{original_ext}"
