@@ -67,7 +67,7 @@ async function loadPortfolio() {
             return;
         }
         
-        // Генерируем HTML для работ в виде сетки
+        // Генерируем HTML для работ в виде сетки (без описаний в карточках)
         portfolioGrid.innerHTML = portfolioWorks.map((work, index) => `
             <div class="portfolio-item" onclick="openPortfolioModal(${index})">
                 <div class="portfolio-image" ${work.images && work.images[0] ? `style="background-image: url('${UPLOAD_BASE}/uploads/${work.images[0]}')"` : ''}>
@@ -77,7 +77,6 @@ async function loadPortfolio() {
                 </div>
                 <div class="portfolio-content">
                     <h3 class="portfolio-title">${work.title || 'Без названия'}</h3>
-                    <p class="portfolio-description">${work.description || 'Описание отсутствует'}</p>
                     ${work.area ? `<div class="portfolio-area">${work.area}</div>` : ''}
                 </div>
             </div>
