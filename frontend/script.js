@@ -150,7 +150,7 @@ async function openPortfolioModal(index) {
                 
                 <div class="modal-info">
                     <h3>${work.title || 'Без названия'}</h3>
-                    <p>${work.description || 'Описание отсутствует'}</p>
+                    ${work.description && String(work.description).trim().length > 0 ? `<p>${work.description}</p>` : ''}
                     ${work.area ? `<span class="modal-area">${work.area}</span>` : ''}
                 </div>
                 
