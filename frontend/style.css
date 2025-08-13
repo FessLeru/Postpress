@@ -771,6 +771,11 @@ section {
     position: relative;
 }
 
+/* Принудительное скрытие описания в карточках */
+.portfolio-description {
+    display: none !important;
+}
+
 .portfolio::before {
     content: '';
     position: absolute;
